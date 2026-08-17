@@ -84,9 +84,11 @@ describe('semantic vision cache', () => {
   it('misses the cache for a different prompt on the same image', async () => {
     const server = await startMockServer((_request, res) => { jsonReply(res, 200, chatReply('ok')) })
     cleanup.push(server.close)
+    const cacheDir = await mkdtemp(join(tmpdir(), 'dsh-llm-vision-cache-'))
+    cleanup.push(() => rm(cacheDir, { recursive: true, force: true }))
     const ctx = new Context()
   contexts.push(ctx)
-    await boot(ctx, server.url)
+    await boot(ctx, server.url, cacheDir)
     const path = await tempPng()
 
     await callDescribe(ctx, { image: path, prompt: 'first prompt' })

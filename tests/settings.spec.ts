@@ -49,13 +49,15 @@ async function boot(
 ): Promise<{ ctx: Context; server: MockServer }> {
   const server = await startMockServer(handler)
   cleanup.push(server.close)
+  const cacheDir = await mkdtemp(join(tmpdir(), 'dsh-llm-vision-settings-cache-'))
+  cleanup.push(() => rm(cacheDir, { recursive: true, force: true }))
   const ctx = new Context()
   contexts.push(ctx)
   await ctx.plugin(MemorySettings, { doc })
   await ctx.plugin(FakeWebServer)
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
-  await ctx.plugin(tool, { baseURL: server.url, model: 'entry-model', apiKey: 'sk-entry' })
+  await ctx.plugin(tool, { baseURL: server.url, model: 'entry-model', apiKey: 'sk-entry', cacheDir })
   return { ctx, server }
 }
 
@@ -152,11 +154,13 @@ describe('describe-image settings section', () => {
   it('keeps the composition entry authoritative while the settings service is absent', async () => {
     const server = await startMockServer((_request, res) => { jsonReply(res, 200, chatReply('ok')) })
     cleanup.push(server.close)
+    const cacheDir = await mkdtemp(join(tmpdir(), 'dsh-llm-vision-settings-cache-'))
+    cleanup.push(() => rm(cacheDir, { recursive: true, force: true }))
     const ctx = new Context()
     await ctx.plugin(FakeWebServer)
     await ctx.plugin(SystemPrompt)
     await ctx.plugin(ToolRuntime)
-    await ctx.plugin(tool, { baseURL: server.url, model: 'entry-only', apiKey: 'sk-entry' })
+    await ctx.plugin(tool, { baseURL: server.url, model: 'entry-only', apiKey: 'sk-entry', cacheDir })
     const path = await tempPng()
 
     await callDescribe(ctx, path)

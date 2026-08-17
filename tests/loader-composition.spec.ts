@@ -39,12 +39,16 @@ afterEach(async () => {
 async function boot(configLines: readonly string[]): Promise<Context> {
   root = await mkdtemp(join(tmpdir(), 'dsh-llm-vision-loader-'))
   const configPath = join(root, 'cordis.yml')
+  // Isolate the persistent cache inside this boot's tmp root: e2e calls here
+  // share the same image bytes and prompts, so a default (real user) cacheDir
+  // would serve cross-run cache hits and swallow the HTTP request.
+  const cacheLine = `    cacheDir: ${join(root, 'cache')}`
   await writeFile(configPath, [
     "- name: '@deepseek-ai/dsh-agent'",
     "- name: '@deepseek-ai/dsh-system-prompt'",
     "- name: '@deepseek-ai/dsh-tools'",
     "- name: 'dsh-llm-vision'",
-    ...configLines.length > 0 ? ['  config:', ...configLines] : [],
+    ...configLines.length > 0 ? ['  config:', ...configLines, cacheLine] : [],
     '',
   ].join('\n'))
 

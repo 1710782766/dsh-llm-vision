@@ -96,6 +96,11 @@ async function setup(
   over: Partial<tool.Config> = {},
   options: { seed?: Record<string, string>; noInlineKey?: boolean; attachments?: boolean } = {},
 ): Promise<Context> {
+  // Isolate the persistent cache per mount: tests share image bytes, models and
+  // prompts, so a shared/default cacheDir would serve cross-test cache hits and
+  // silently swallow requests (the "cache uses tmp dirs" discipline).
+  const cacheDir = await mkdtemp(join(tmpdir(), 'dsh-llm-vision-tool-cache-'))
+  cleanup.push(() => rm(cacheDir, { recursive: true, force: true }))
   const ctx = new Context()
   contexts.push(ctx)
   if (options.seed !== undefined) await ctx.plugin(FakeCredentials, options.seed)
@@ -107,6 +112,7 @@ async function setup(
     ...BASE_CONFIG,
     ...options.noInlineKey === true ? {} : { apiKey: 'sk-inline' },
     ...over,
+    cacheDir,
   })
   return ctx
 }
