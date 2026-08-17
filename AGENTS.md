@@ -1,13 +1,11 @@
 # AGENTS.md — dsh-llm-vision 项目规范
 
-本文件是给 AI agent（及人类贡献者）的项目约定。**上线级质量是本项目的硬要求**——参考
-dsh-recommend 高分插件与 dsh-web-ui 全家桶的成色，不接受粗糙实现。
+本文件是给 AI agent（及人类贡献者）的项目约定。**上线级质量是本项目的硬要求**，不接受粗糙实现。
 
 ## 项目定位
 
-DeepSeek Harness 插件：给纯文本模型提供可靠视觉 + OCR。是 llm_vision（Python MCP，
-MIT）的 TypeScript 原生移植 + 增强。差异化一句话：**"The vision plugin that doesn't
-hallucinate on screenshots"**——critical 审视视角（llm_vision 实测沉淀）+ 可靠性工程
+DeepSeek Harness 插件：给纯文本模型提供可靠视觉 + OCR。差异化一句话：**"The vision plugin that doesn't
+hallucinate on screenshots"**——critical 审视视角（实测沉淀）+ 可靠性工程
 （预处理 / 重试 / 持久缓存）+ DSH 原生体验（粘贴桥 / 设置卡 / URL / 附件引用）。
 
 ## 错误行为协议（错误即接口）
@@ -44,14 +42,13 @@ hallucinate on screenshots"**——critical 审视视角（llm_vision 实测沉�
 
 配置默认值同时出现在：config-resolve.ts 的 DEFAULT_* 常量、同文件 Schemastery
 schema 默认、tests/ 相关断言、README ×2 的配置表、本文件。只改一处会静默漂移
-（llm_vision 踩过的坑，不许重犯）。所有"部署间可能不同的旋钮"必须是配置字段，不得
+（此前踩过的坑，不许重犯）。所有"部署间可能不同的旋钮"必须是配置字段，不得
 硬编码。
 
 ## 测试纪律
 
 - 全部测试离线（fetch 用 mock server；backoff 用 vi.mock 跳过等待；持久缓存用 tmp 目录）
-- 测试移植自两份遗产：dsh-web-ui dsh-tool-describe-image 的 spec（tool / settings /
-  attach-routes / loader-composition / vision-cache / client-*）与 llm_vision 的
+- 测试移植自既有实现的 spec（工具 / 设置 / 路由 / 组合 / 缓存 / client 等）与更早前身的
   用例设计（错误前缀、边界、TOCTOU、重试预算）
 - 新增能力必须带测试；错误文案断言前缀，不断言完整文案
 
