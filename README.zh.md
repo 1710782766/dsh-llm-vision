@@ -12,8 +12,9 @@
 沉淀了让截图 QA 可信的提示词工程、可靠性工程（预处理 / 重试 / 持久缓存），
 并补齐 DSH 原生体验——粘贴桥、免重启设置卡、URL 输入、附件引用。
 
-> **状态**：v1 源码已上线 GitHub——**尚未发布到 npm**，也尚未对真实视觉端点验证
-> （目前由 183 个离线测试覆盖）。
+> **状态**：v1 源码已上线 GitHub——**尚未发布到 npm**。已在真实 Web GUI 中
+> 对真实 OpenAI 兼容视觉端点完成端到端验证（DashScope `qwen3-vl-plus` /
+> `qwen3.5-ocr`）；183 个离线测试。
 
 ## 为什么需要它
 
@@ -64,9 +65,13 @@ dsh plugin --profile web add dsh-llm-vision
 
 ### 配置
 
-设置 → 插件配置 → llm-vision，或经 patch 层：
+官方 Web GUI 的「插件配置」页只暴露白名单内的 settings 命名空间——第三方
+命名空间被刻意排除（官方注释将"插件声明暴露"列为延期工作）。因此设置卡会
+显示「命名空间未暴露」说明；请改在 profile patch 层配置，密钥走环境变量
+引用（patch 文件绝不写明文密钥）：
 
 ```yaml
+# ~/.dsh/profiles/web/cordis.patch.yml
 - id: llm-vision
   name: 'dsh-llm-vision'
   config:
@@ -75,6 +80,13 @@ dsh plugin --profile web add dsh-llm-vision
     ocrModel: qwen3.5-ocr
     apiKey: !!js process.env.VISION_API_KEY
 ```
+
+```sh
+# ~/.dsh/.env（或启动 dsh 前 export）
+VISION_API_KEY=sk-...
+```
+
+然后重启 GUI。设置 → 插件配置中卡片可见，并会说明这一限制而不是消失。
 
 | 键 | 默认 | 含义 |
 |---|---|---|
@@ -121,8 +133,12 @@ dsh plugin --profile web add dsh-llm-vision
 
 ## 测试状态
 
-183 个离线单元/集成测试（vitest、mock HTTP 服务、tmp 目录缓存）加严格 typecheck——但插件
-**尚未在真实视觉端点和真实 DSH Web GUI 会话中验证过**。在完成该验证前，请对边界情况有预期。
+183 个离线单元/集成测试（vitest、mock HTTP 服务、tmp 目录缓存）+ 严格 typecheck +
+每次推送的 CI。并已在**真实 DSH Web GUI 中端到端验证**：`describe_image` 真实读图
+（DashScope `qwen3-vl-plus`）、`extract_text` 真实 OCR 转录（`qwen3.5-ocr`）、
+attach 上传/回读路由经真实 web 服务器工作、设置卡在插件配置页正常渲染。
+已知体验缺口：卡片在 GUI 中无法编辑取值（官方 settings 白名单），配置走
+patch 层——见[配置](#配置)。
 
 ## 已知限制
 
