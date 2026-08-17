@@ -2,6 +2,11 @@
 
 English | [中文](README.zh.md)
 
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/1710782766/dsh-llm-vision.svg)](https://github.com/1710782766/dsh-llm-vision)
+[![CI](https://github.com/1710782766/dsh-llm-vision/actions/workflows/ci.yml/badge.svg)](https://github.com/1710782766/dsh-llm-vision/actions/workflows/ci.yml)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-blue.svg)](package.json)
+
 **Reliable vision + OCR for text-only models on DeepSeek Harness.**
 
 Prompt engineering that makes screenshot QA trustworthy, the same reliability

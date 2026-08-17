@@ -72,3 +72,23 @@ schema 默认、tests/ 相关断言、README ×2 的配置表、本文件。只�
 deepseek-harness）与 zhu1090093659/dsh-web-ui（Apache-2.0）；llm_vision（MIT）贡献
 提示词与可靠性设计。Apache-2.0 许可 + NOTICE 署名已就位；**新增的移植/借鉴代码必须
 保持文件头来源注释与 NOTICE 更新**。
+
+## GitHub 识别与发布规范
+
+**GitHub 侧（识别为 dsh 插件的关键，改 topics/description 必须保持）**：
+- topics 必含 `dsh-plugin`（市场/榜单/awesome 列表全靠它自动抓取），并保持
+  `deepseek-harness`、`dsh`、`vision`、`ocr` 等生态相关标签
+- description 保持一句定位话（英文）：给文本模型可靠视觉 + OCR 的 DSH 插件
+
+**发布检查清单（npm publish 前逐项过）**：
+1. `pnpm typecheck && pnpm test && pnpm build` 全绿；CI（.github/workflows/ci.yml）通过
+2. `pnpm pack` 产物含 lib/（node 半 + lib/client.js）与 cordis.patch.yml
+3. 版本号与 git tag 同步；README 状态行从"未发布"更新为发布版本
+4. 发布后立即验证：`dsh plugin --profile web add dsh-llm-vision` 安装成功 + bundle 层生效
+5. 记得给 GitHub Release 附变更摘要（git tag + 说明）
+
+**安装路径事实（写文档/注释时不许再写错）**：
+- `dsh plugin add <name>` 是 pnpm 转发器，按包名从 npm registry 解析——未发布时
+  **必然失败**；当前可用路径是 `pnpm pack` tarball 或本地 checkout（先 build，lib 不入库）
+- git 直装需要 prepare 脚本 + 用户 allowBuilds（未提供时文档不得写 git 直装方式）
+

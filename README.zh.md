@@ -2,6 +2,11 @@
 
 [English](README.md) | 中文
 
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/1710782766/dsh-llm-vision.svg)](https://github.com/1710782766/dsh-llm-vision)
+[![CI](https://github.com/1710782766/dsh-llm-vision/actions/workflows/ci.yml/badge.svg)](https://github.com/1710782766/dsh-llm-vision/actions/workflows/ci.yml)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-blue.svg)](package.json)
+
 **给纯文本模型可靠视觉 + OCR 的 DeepSeek Harness 插件。**
 
 沉淀了让截图 QA 可信的提示词工程、可靠性工程（预处理 / 重试 / 持久缓存），
