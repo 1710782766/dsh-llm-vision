@@ -1,0 +1,77 @@
+# AGENTS.md — dsh-llm-vision 项目规范
+
+本文件是给 AI agent（及人类贡献者）的项目约定。**上线级质量是本项目的硬要求**——参考
+dsh-recommend 高分插件与 dsh-web-ui 全家桶的成色，不接受粗糙实现。
+
+## 项目定位
+
+DeepSeek Harness 插件：给纯文本模型提供可靠视觉 + OCR。是 llm_vision（Python MCP，
+MIT）的 TypeScript 原生移植 + 增强。差异化一句话：**"The vision plugin that doesn't
+hallucinate on screenshots"**——critical 审视视角（llm_vision 实测沉淀）+ 可靠性工程
+（预处理 / 重试 / 持久缓存）+ DSH 原生体验（粘贴桥 / 设置卡 / URL / 附件引用）。
+
+## 错误行为协议（错误即接口）
+
+1. **前缀稳定可 grep**：所有抛出的 Error 消息以 "llm-vision: " 开头。测试逐条断言这些
+   前缀；改动文案必须同步测试。
+2. **失败=抛出（isError），领域结果=规范 JSON**：基础设施/校验失败 throw；成功的领域
+   结果写进 output.schema 规范值（{ text, model, image, mimeType, bytes }），渲染
+   层负责人类可读内容。绝不返回"错误字符串冒充成功"。
+3. **错误信息有界**：端点错误摘录 ≤ 200 字符；响应体按 maxOutputTokens*8+64KiB 截断
+   后再解析；密钥绝不进错误/日志。
+4. **瞬时错误才重试**：超时 / 网络 / HTTP 429、5xx 按 maxRetries 重试（退避
+   min(2^i, 4s)，预算递减 ≤ 2×timeout）；调用方取消（AbortError）立即中止不重试；
+   4xx 与解析错误直接失败。耗尽重试的错误带"（已重试 N 次）"后缀。
+5. **预处理与缓存绝不破坏调用链**：preprocess/cache 任何失败静默降级为原图/未命中。
+
+## 架构
+
+    src/index.ts（注册 describe_image[normal|critical] + extract_text，共 runVision 管线）
+      → cache.ts            PersistentAnswerCache：内容寻址（图片字节 SHA-256），TTL 30d，
+                             上限 500 条，原子写，0600/0700，跨会话
+      → vision-client.ts    loadImage（路径/URL/附件引用，magic bytes，10MB 上限，拒重定向）
+                            → preprocess.ts（超 1568px 缩放 / 超 1.5MB 重压，macOS sips 零依赖，
+                              失败静默降级）→ callVision（双协议 chat-completions/responses，
+                              重试/退避）
+      → attach-routes.ts    /llm-vision/attach 上传路由 + /llm-vision/raw 回读（内容寻址 id）
+      → client/（browser 半）发送改写为引用、会话内缩略图、设置卡（slots + settingsScope）
+
+- 工具恒返回字符串成功 / 抛错失败，图片字节永不进会话记录
+- mountOnce('dsh-llm-vision', …) 防重复挂载；工具注册基于副作用，卸载自动注销
+- client 半的 DOM 接线失败只记日志绝不抛（壳会因插件 apply 抛错而整体启动失败）
+
+## 配置纪律（改默认值需同步 5 处）
+
+配置默认值同时出现在：config-resolve.ts 的 DEFAULT_* 常量、同文件 Schemastery
+schema 默认、tests/ 相关断言、README ×2 的配置表、本文件。只改一处会静默漂移
+（llm_vision 踩过的坑，不许重犯）。所有"部署间可能不同的旋钮"必须是配置字段，不得
+硬编码。
+
+## 测试纪律
+
+- 全部测试离线（fetch 用 mock server；backoff 用 vi.mock 跳过等待；持久缓存用 tmp 目录）
+- 测试移植自两份遗产：dsh-web-ui dsh-tool-describe-image 的 spec（tool / settings /
+  attach-routes / loader-composition / vision-cache / client-*）与 llm_vision 的
+  用例设计（错误前缀、边界、TOCTOU、重试预算）
+- 新增能力必须带测试；错误文案断言前缀，不断言完整文案
+
+## 安全 / 隐私
+
+- API key：内联 apiKey（schema role('secret')）→ 凭证服务 apiKeyEnv（默认
+  VISION_API_KEY）→ 启动环境，逐级回退；绝不写进 cordis.patch.yml 或代码
+- 视觉请求与图片下载一律 redirect: 'error'；仅接受 http(s) 与本地路径
+- 调用工具即把图片字节外发到所配端点——README 明示，仅外传允许外传的图
+
+## 常用命令
+
+    pnpm typecheck          # tsc -b + vitest 程序
+    pnpm test               # vitest run（离线）
+    pnpm build              # tsc -b && tsdown（lib/ + lib/client.js）
+    pnpm watch              # tsdown --watch
+
+## 署名与许可（法律义务）
+
+主体代码移植自 whitelonng/dsh-plugin-describe-image（MIT，源自 deepseek-ai
+deepseek-harness）与 zhu1090093659/dsh-web-ui（Apache-2.0）；llm_vision（MIT）贡献
+提示词与可靠性设计。Apache-2.0 许可 + NOTICE 署名已就位；**新增的移植/借鉴代码必须
+保持文件头来源注释与 NOTICE 更新**。

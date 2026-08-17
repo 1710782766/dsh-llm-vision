@@ -1,0 +1,15 @@
+# dsh-llm-vision bundle patch: inserts the describe_image / extract_text
+# tool plugin row into the web profile roster. Applied as a profile bundle
+# layer (the dsh.bundle.patch manifest field); install with
+#   dsh plugin --profile web add dsh-llm-vision
+#
+# One package, both halves: the node half (exports ".") runs in the host
+# process and registers the model-facing describe_image + extract_text tools,
+# the /llm-vision/attach upload route, and the "llm-vision" settings section;
+# the browser half (declared by dsh.client, served from lib/client.js)
+# rewrites image-bearing sends into attach references at submit time and
+# renders inline thumbnails. The settings card is rendered by the web GUI's
+# built-in plugin config page from the llm-vision settings section.
+- insert:
+    - id: llm-vision
+      name: 'dsh-llm-vision'

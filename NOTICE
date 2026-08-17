@@ -1,0 +1,20 @@
+dsh-llm-vision
+Copyright 2026 dsh-llm-vision contributors
+
+This product includes software derived from:
+
+1. deepseek-harness packages/vision/tool-describe-image
+   (https://github.com/deepseek-ai/deepseek-harness), mirrored at
+   whitelonng/dsh-plugin-describe-image (MIT), Copyright DeepSeek AI
+   and the original authors.
+
+2. The dsh-web-ui plugin family
+   (https://github.com/zhu1090093659/dsh-web-ui),
+   Apache License 2.0, Copyright the dsh-web-ui contributors —
+   specifically packages/dsh-tool-describe-image and the shared
+   tsdown client-bundle preset (shared/tsdown.client.ts).
+
+3. Design ideas from llm_vision
+   (https://github.com/1710782766/llm_vision), MIT —
+   prompt engineering (critical inspection perspective), image
+   preprocessing, retry budgets, and the persistent answer cache.

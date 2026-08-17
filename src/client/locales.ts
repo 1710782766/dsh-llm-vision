@@ -1,0 +1,180 @@
+/** `describe-image` client namespace dictionaries (composer attach button copy). */
+
+/** Simplified Chinese dictionary (the key-set source of truth). */
+export const zh = {
+  'attach.button.title': '插入图片引用（describe-image 图像理解）',
+  'attach.button.aria': '插入图片引用，交给 describe_image 工具分析',
+  'attach.uploading': '上传中…',
+  'attach.success': '图片引用已插入输入框；发送后文本模型可通过 describe_image 分析这张图片。',
+  'attach.error.read': '无法读取所选图片文件。',
+  'attach.error.type': '不支持的图片类型，仅接受 PNG / JPEG / GIF / WebP。',
+  'attach.error.size': '图片超过 10 MB 上限。',
+  'attach.error.noSession': '当前没有可用会话，无法插入图片引用。',
+  'attach.error.upload': '上传失败：{error}',
+  'card.title': '视觉与 OCR',
+  'card.description': 'describe_image（双视角）与 extract_text 工具所调用的视觉语言端点。',
+  'settings.expand': '展开设置',
+  'settings.collapse': '收起设置',
+  'settings.notExposed': '当前部署未暴露此命名空间，无法在此编辑；请在挂载配置中填写端点。',
+  'settings.unsaved': '有未保存的修改',
+  'settings.readOnly': '当前部署的设置为只读。',
+  'settings.saveFailed': '保存失败，请重试。',
+  'settings.discard': '放弃修改',
+  'settings.save': '保存',
+  'settings.saving': '保存中…',
+  'settings.overridden': '已覆盖',
+  'settings.reset': '重置',
+  'settings.inherit': '继承',
+  'settings.on': '开',
+  'settings.off': '关',
+  'settings.invalidNumber': '需要有效的数字',
+  'field.baseURL': '接口地址',
+  'field.baseURL.hint': 'OpenAI 兼容根地址；按协议追加 /chat/completions 或 /responses。',
+  'field.model': '模型',
+  'field.model.hint': '该端点提供的视觉模型 id。',
+  'field.apiStyle': '接口协议',
+  'field.apiStyle.hint': 'chat-completions 走 /chat/completions，responses 走 /responses。',
+  'field.apiStyle.chatCompletions': 'Chat Completions',
+  'field.apiStyle.responses': 'Responses',
+  'field.apiKey': 'API Key',
+  'field.apiKey.hint': '不写入设置文件。留空表示保持当前密钥。',
+  'field.apiKeyEnv': '密钥环境变量',
+  'field.apiKeyEnv.hint': '凭证服务解析该环境变量名；空字符串禁用。',
+  'field.ocrModel': 'OCR 模型',
+  'field.ocrModel.hint': 'extract_text 工具使用的 OCR 模型 id。',
+  'field.criticalPrompt': '审视视角指令',
+  'field.criticalPrompt.hint': 'describe_image 在 critical 视角、模型未传 prompt 时使用。',
+  'field.normalPrompt': '自然视角指令',
+  'field.normalPrompt.hint': 'describe_image 在 normal 视角、模型未传 prompt 时使用。',
+  'field.ocrPrompt': 'OCR 指令',
+  'field.ocrPrompt.hint': 'extract_text 在模型未传 prompt 时使用。',
+  'field.maxBytes': '图片字节上限',
+  'field.maxBytes.hint': '本地文件与下载一致的字节上限。',
+  'field.maxOutputTokens': '输出 token 上限',
+  'field.maxOutputTokens.hint': '发给端点的 max_tokens（responses 协议为 max_output_tokens）。',
+  'field.timeoutMs': '超时（毫秒）',
+  'field.timeoutMs.hint': '单次视觉请求超时。',
+  'field.maxRetries': '重试次数',
+  'field.maxRetries.hint': '瞬时错误（超时/网络/5xx/429）的重试次数，0 禁用。',
+  'field.maxEdge': '最大边长（像素）',
+  'field.maxEdge.hint': '超过此边长的图片在调用前自动等比缩放；0 禁用。',
+  'field.compressEnabled': '自动压缩',
+  'field.compressEnabled.hint': '开：超大图自动缩放/重压（macOS sips，其他平台静默跳过）。',
+  'field.cacheEnabled': '持久缓存',
+  'field.cacheEnabled.hint': '开：成功回答按内容寻址缓存（跨会话复用），明文存于本机缓存文件。',
+  'field.cacheDir': '缓存目录',
+  'field.cacheDir.hint': '默认 $XDG_CACHE_HOME/dsh-llm-vision 或 ~/.cache/dsh-llm-vision。',
+  'field.cacheTtlDays': '缓存天数',
+  'field.cacheTtlDays.hint': '缓存条目保留天数，过期惰性清除。',
+  'field.cacheMaxEntries': '缓存条数上限',
+  'field.cacheMaxEntries.hint': '超过上限淘汰最旧条目。',
+  'field.renderImagePreview': '会话内渲染图片预览',
+  'field.renderImagePreview.hint': '开：会话里的图片引用原地显示为缩略图，点击查看大图；关：保持原始引用文本。仅影响本地显示，消息文本与模型识别不变。',
+  'field.interceptImageSend': '发送时改写图片为 describe-image 引用',
+  'field.interceptImageSend.hint': '开（默认）：带图片的发送在提交时被改写为 describe-image 引用；关：发送原样放行，图片与附件块交给会话（与其他视觉插件共用时需要关闭）。',
+  'preview.expand': '点击查看大图',
+  'preview.close': '关闭大图',
+} satisfies Record<string, string>
+
+/** The describe-image client namespace key union. */
+export type DescribeImageClientKey = keyof typeof zh
+
+/** English dictionary, checked complete against the zh key set. */
+export const en = {
+  'attach.button.title': 'Insert image reference (describe-image vision)',
+  'attach.button.aria': 'Insert an image reference for the describe_image tool',
+  'attach.uploading': 'Uploading…',
+  'attach.success': 'Image reference inserted; the text model can analyze this image via describe_image once you send the message.',
+  'attach.error.read': 'Could not read the selected image file.',
+  'attach.error.type': 'Unsupported image type; only PNG / JPEG / GIF / WebP are accepted.',
+  'attach.error.size': 'The image exceeds the 10 MB bound.',
+  'attach.error.noSession': 'No active session; cannot insert an image reference.',
+  'attach.error.upload': 'Upload failed: {error}',
+  'card.title': 'Vision & OCR',
+  'card.description': 'The vision-language endpoint behind the describe_image (dual perspective) and extract_text tools.',
+  'settings.expand': 'Expand settings',
+  'settings.collapse': 'Collapse settings',
+  'settings.notExposed': 'This deployment does not expose the namespace; configure the endpoint in the mount config instead.',
+  'settings.unsaved': 'Unsaved changes',
+  'settings.readOnly': 'Settings are read-only in this deployment.',
+  'settings.saveFailed': 'Save failed; try again.',
+  'settings.discard': 'Discard',
+  'settings.save': 'Save',
+  'settings.saving': 'Saving…',
+  'settings.overridden': 'Overridden',
+  'settings.reset': 'Reset',
+  'settings.inherit': 'Inherit',
+  'settings.on': 'On',
+  'settings.off': 'Off',
+  'settings.invalidNumber': 'A valid number is required',
+  'field.baseURL': 'Base URL',
+  'field.baseURL.hint': 'OpenAI-compatible root URL; /chat/completions or /responses is appended per the API style.',
+  'field.model': 'Model',
+  'field.model.hint': 'The vision model id this endpoint provides.',
+  'field.apiStyle': 'API style',
+  'field.apiStyle.hint': 'chat-completions posts to /chat/completions; responses posts to /responses.',
+  'field.apiStyle.chatCompletions': 'Chat Completions',
+  'field.apiStyle.responses': 'Responses',
+  'field.apiKey': 'API key',
+  'field.apiKey.hint': 'Never written to the settings file. Leave empty to keep the current key.',
+  'field.apiKeyEnv': 'Key environment variable',
+  'field.apiKeyEnv.hint': 'Resolved through the credential service; empty disables it.',
+  'field.ocrModel': 'OCR model',
+  'field.ocrModel.hint': 'The OCR model id the extract_text tool calls.',
+  'field.criticalPrompt': 'Critical inspection prompt',
+  'field.criticalPrompt.hint': 'Used by describe_image in the critical perspective when the model omits its prompt.',
+  'field.normalPrompt': 'Normal description prompt',
+  'field.normalPrompt.hint': 'Used by describe_image in the normal perspective when the model omits its prompt.',
+  'field.ocrPrompt': 'OCR prompt',
+  'field.ocrPrompt.hint': 'Used by extract_text when the model omits its prompt.',
+  'field.maxBytes': 'Max image bytes',
+  'field.maxBytes.hint': 'Byte bound for local files and downloads alike.',
+  'field.maxOutputTokens': 'Max output tokens',
+  'field.maxOutputTokens.hint': 'The max_tokens sent to the endpoint (max_output_tokens under the responses style).',
+  'field.timeoutMs': 'Timeout (ms)',
+  'field.timeoutMs.hint': 'Per-call vision request timeout.',
+  'field.maxRetries': 'Max retries',
+  'field.maxRetries.hint': 'Retries for transient failures (timeout / network / 5xx / 429); 0 disables.',
+  'field.maxEdge': 'Max image edge (px)',
+  'field.maxEdge.hint': 'Images with a longer edge are scaled down before the call; 0 disables.',
+  'field.compressEnabled': 'Auto-compress',
+  'field.compressEnabled.hint': 'On: oversize images scale/re-encode automatically (macOS sips; silently skipped elsewhere).',
+  'field.cacheEnabled': 'Persistent cache',
+  'field.cacheEnabled.hint': 'On: successful answers are cached by content across sessions, in plain text on this machine.',
+  'field.cacheDir': 'Cache directory',
+  'field.cacheDir.hint': 'Defaults to $XDG_CACHE_HOME/dsh-llm-vision or ~/.cache/dsh-llm-vision.',
+  'field.cacheTtlDays': 'Cache TTL (days)',
+  'field.cacheTtlDays.hint': 'Entries older than this are pruned lazily.',
+  'field.cacheMaxEntries': 'Max cache entries',
+  'field.cacheMaxEntries.hint': 'Oldest entries are evicted beyond this cap.',
+  'field.renderImagePreview': 'Render image preview in chat',
+  'field.renderImagePreview.hint': 'On: image references in the conversation upgrade into inline thumbnails (click for full size). Off: the raw reference text stays. Display-only — the message text and model-side analysis are unchanged.',
+  'field.interceptImageSend': 'Rewrite image sends into describe-image references',
+  'field.interceptImageSend.hint': 'On (default): image-bearing sends are rewritten into describe-image references at submit. Off: sends pass through untouched, handing the raw image blocks to other vision plugins.',
+  'preview.expand': 'Click to view full size',
+  'preview.close': 'Close full image',
+} satisfies Record<string, string>
+
+/** The two dictionaries, keyed by language. */
+export const dictionaries: Record<string, Record<DescribeImageClientKey, string>> = { zh, en }
+
+/** Current UI language, mirrored from the shell (defaults to zh). */
+let currentLanguage: string = 'zh'
+
+/** Switch the client copy language. */
+export function setLanguage(language: string): void {
+  currentLanguage = language
+}
+
+/** Format a `{name}` template with values. */
+function format(template: string, params: Record<string, string | number>): string {
+  return template.replace(/\{([a-zA-Z0-9]+)\}/g, (match, name: string) =>
+    name in params ? String(params[name]) : match)
+}
+
+/** Translate one key; falls back to the zh dictionary for unknown keys. */
+export function t(key: DescribeImageClientKey, params?: Record<string, string | number>): string {
+  const table = dictionaries[currentLanguage] ?? zh
+  const template = table[key] ?? zh[key]
+  return params === undefined ? template : format(template, params)
+}
