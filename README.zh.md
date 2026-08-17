@@ -12,9 +12,9 @@
 沉淀了让截图 QA 可信的提示词工程、可靠性工程（预处理 / 重试 / 持久缓存），
 并补齐 DSH 原生体验——粘贴桥、免重启设置卡、URL 输入、附件引用。
 
-> **状态**：v1 源码已上线 GitHub——**尚未发布到 npm**。已在真实 Web GUI 中
-> 对真实 OpenAI 兼容视觉端点完成端到端验证（DashScope `qwen3-vl-plus` /
-> `qwen3.5-ocr`）；183 个离线测试。
+> **状态**：v0.1.0 已上线 GitHub 与 npm。已在真实 Web GUI 中对真实 OpenAI
+> 兼容视觉端点完成端到端验证（DashScope `qwen3-vl-plus` / `qwen3.5-ocr`）；
+> 183 个离线测试。
 
 ## 为什么需要它
 
@@ -36,32 +36,19 @@ DSH 原生体验：
 
 ## 安装
 
-**尚未发布到 npm。** `dsh plugin add <包名>` 会按包名到 npm registry 解析，所以一行命令
-要等发布后才能用。目前请用本地 tarball 或 checkout 安装：
-
-### 方式一：tarball（推荐）
-
-```sh
-# 在本仓库目录下：
-pnpm install && pnpm build && pnpm pack        # → dsh-llm-vision-0.1.0.tgz
-dsh plugin --profile web add ./dsh-llm-vision-0.1.0.tgz
-```
-
-tarball 自带预构建的 `lib/`（node 半 + `lib/client.js`），安装方无需执行构建。
-
-### 方式二：本地 checkout
-
-```sh
-git clone https://github.com/1710782766/dsh-llm-vision.git
-cd dsh-llm-vision && pnpm install && pnpm build   # lib/ 被 gitignore——必须先构建
-dsh plugin --profile web add /绝对路径/dsh-llm-vision
-```
-
-### 发布到 npm 之后
-
 ```sh
 dsh plugin --profile web add dsh-llm-vision
 ```
+
+从源码 checkout 安装时，同一命令接受 tarball 或本地路径：
+
+```sh
+pnpm install && pnpm build && pnpm pack   # → dsh-llm-vision-0.1.0.tgz
+dsh plugin --profile web add ./dsh-llm-vision-0.1.0.tgz
+# 或：dsh plugin --profile web add /路径/dsh-llm-vision   （先 build——lib/ 被 gitignore）
+```
+
+tarball 自带预构建的 `lib/`（node 半 + `lib/client.js`），安装方无需执行构建。
 
 ### 配置
 

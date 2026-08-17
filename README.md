@@ -13,9 +13,9 @@ Prompt engineering that makes screenshot QA trustworthy, the same reliability
 engineering (preprocessing / retries / persistent cache) — plus the DSH-native
 experience paste-bridge, live settings card, URL input, and attachment references.
 
-> **Status**: v1 source on GitHub — **not yet published to npm**. Verified
-> end-to-end against a live OpenAI-compatible vision endpoint (DashScope
-> `qwen3-vl-plus` / `qwen3.5-ocr`) in the real web GUI; 183 offline tests.
+> **Status**: v0.1.0 on GitHub and npm. Verified end-to-end against a live
+> OpenAI-compatible vision endpoint (DashScope `qwen3-vl-plus` / `qwen3.5-ocr`)
+> in the real web GUI; 183 offline tests.
 
 ## Why
 
@@ -41,34 +41,20 @@ Plus the DSH-native experience:
 
 ## Install
 
-**Not published to npm yet.** `dsh plugin add <name>` resolves package names against the npm
-registry, so the one-liner only works once the package is published. Until then, install from
-a local tarball or checkout:
+```sh
+dsh plugin --profile web add dsh-llm-vision
+```
 
-### Option 1 — tarball (recommended)
+From a source checkout the same command accepts a tarball or local path:
 
 ```sh
-# from this repository checkout:
-pnpm install && pnpm build && pnpm pack        # → dsh-llm-vision-0.1.0.tgz
+pnpm install && pnpm build && pnpm pack   # → dsh-llm-vision-0.1.0.tgz
 dsh plugin --profile web add ./dsh-llm-vision-0.1.0.tgz
+# or: dsh plugin --profile web add /path/to/dsh-llm-vision   (build first — lib/ is gitignored)
 ```
 
 The tarball ships prebuilt `lib/` (both the node half and `lib/client.js`), so no build step
 runs on the installing machine.
-
-### Option 2 — local checkout
-
-```sh
-git clone https://github.com/1710782766/dsh-llm-vision.git
-cd dsh-llm-vision && pnpm install && pnpm build   # lib/ is gitignored — must be built first
-dsh plugin --profile web add /absolute/path/to/dsh-llm-vision
-```
-
-### Once published to npm
-
-```sh
-dsh plugin --profile web add dsh-llm-vision
-```
 
 ### Configure
 
