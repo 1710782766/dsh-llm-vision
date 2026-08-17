@@ -1,9 +1,9 @@
 /**
  * The describe-image settings card: the vision endpoint (base URL, model,
  * key reference), the default instruction, and the call bounds. Registers
- * into the `web-ui.plugin.item` slot the Web UI Plugins group renders,
- * bound to the `describe-image` settings namespace through the family
- * settings bridge (or the official settings scope when the deployment
+ * into the `settings.plugin.item` slot the web GUI's plugin configuration
+ * page renders, bound to the `llm-vision` settings namespace through the
+ * family settings bridge (or the official settings scope when the deployment
  * exposes the namespace directly).
  * @module dsh-llm-vision/client/DescribeImageSettingsCard
  */
@@ -151,7 +151,7 @@ export class DescribeImageSettingsCardController {
 
 /** Props the renderer binds for the describe-image card. */
 export type DescribeImageSettingsCardProps =
-  PropsRuntime<'web-ui.plugin.item'>
+  PropsRuntime<'settings.plugin.item'>
   & InjectFace<DescribeImageSettingsCardFace>
 
 /**

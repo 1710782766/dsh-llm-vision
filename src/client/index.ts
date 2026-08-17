@@ -33,11 +33,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 
   interface SlotMap {
     /**
-     * One family plugin card inside the Web UI Plugins group. Spelled here
-     * with the same shape so this package can register without depending on
-     * the sibling web-ui-settings package.
+     * The settings card seat in the web GUI's plugin configuration page —
+     * the official `settings.plugin.item` slot (the former dsh-web-ui
+     * `web-ui.plugin.item` group seat is not rendered by the official
+     * shell). Spelled here with the same shape so this package can register
+     * without depending on the sibling UI package.
      */
-    'web-ui.plugin.item': { kind: 'list'; scope: 'root'; owner: SettingsPluginItemOwnerProps }
+    'settings.plugin.item': { kind: 'list'; scope: 'root'; owner: SettingsPluginItemOwnerProps }
   }
 }
 
@@ -122,9 +124,9 @@ export function apply(ctx: ClientContext): void {
       // Live toggle: re-scan (or restore) the moment a settings save settles.
       unsubscribeSettings = settingsScope.subscribe(() => previewRef?.refresh())
       const settingsCard = new DescribeImageSettingsCardController(settingsScope)
-      slots.inject('web-ui.plugin.item', () => {
+      slots.inject('settings.plugin.item', () => {
         const unregister = slots.register({
-          name: 'web-ui.plugin.item',
+          name: 'settings.plugin.item',
           id: 'llm-vision',
           order: 115,
           locale: NS,
