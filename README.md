@@ -1,12 +1,15 @@
 # dsh-llm-vision
 
+English | [中文](README.zh.md)
+
 **Reliable vision + OCR for text-only models on DeepSeek Harness.**
 
-Field-tested prompt engineering that makes screenshot QA trustworthy, the same reliability
-engineering (preprocessing / retries / persistent cache) — plus the DSH-native experience
-paste-bridge, live settings card, URL input, and attachment references.
+Prompt engineering that makes screenshot QA trustworthy, the same reliability
+engineering (preprocessing / retries / persistent cache) — plus the DSH-native
+experience paste-bridge, live settings card, URL input, and attachment references.
 
-> **Status**: v1 on GitHub — npm publish pending.
+> **Status**: v1 source on GitHub — **not yet published to npm**, and not yet
+> verified against a live vision endpoint (covered by 183 offline tests).
 
 ## Why
 
@@ -15,7 +18,7 @@ two model-facing tools backed by any OpenAI-compatible vision endpoint:
 
 | Tool | Purpose |
 |---|---|
-| `describe_image` | Image understanding with two perspectives: **normal** (natural description) and **critical** (objective inspection that actively reports text misalignment, overlap, occlusion, wrapping anomalies, missing elements, and separates fact from guess). The critical lens is the field-tested antidote to vision models rationalizing rendering bugs — use it for page/UI problem reports and screenshot-vs-design comparisons. |
+| `describe_image` | Image understanding with two perspectives: **normal** (natural description) and **critical** (objective inspection that actively reports text misalignment, overlap, occlusion, wrapping anomalies, missing elements, and separates fact from guess). The critical lens is the antidote to vision models rationalizing rendering bugs — use it for page/UI problem reports and screenshot-vs-design comparisons. |
 | `extract_text` | OCR & document parsing through a dedicated OCR model — ID cards, invoices, receipts; structured output (JSON/CSV) on request; verbatim extraction that never guesses missing text. |
 
 Plus the DSH-native experience:
@@ -31,6 +34,31 @@ Plus the DSH-native experience:
   conversation.
 
 ## Install
+
+**Not published to npm yet.** `dsh plugin add <name>` resolves package names against the npm
+registry, so the one-liner only works once the package is published. Until then, install from
+a local tarball or checkout:
+
+### Option 1 — tarball (recommended)
+
+```sh
+# from this repository checkout:
+pnpm install && pnpm build && pnpm pack        # → dsh-llm-vision-0.1.0.tgz
+dsh plugin --profile web add ./dsh-llm-vision-0.1.0.tgz
+```
+
+The tarball ships prebuilt `lib/` (both the node half and `lib/client.js`), so no build step
+runs on the installing machine.
+
+### Option 2 — local checkout
+
+```sh
+git clone https://github.com/1710782766/dsh-llm-vision.git
+cd dsh-llm-vision && pnpm install && pnpm build   # lib/ is gitignored — must be built first
+dsh plugin --profile web add /absolute/path/to/dsh-llm-vision
+```
+
+### Once published to npm
 
 ```sh
 dsh plugin --profile web add dsh-llm-vision
@@ -100,6 +128,12 @@ Settings → Plugins → llm-vision, or via the patch layer:
   bounded to 200 chars.
 - Calling the tools sends the image bytes to the configured endpoint — only hand the model images
   you are comfortable leaving your machine.
+
+## Testing status
+
+183 offline unit/integration tests (vitest, mock HTTP server, tmp-dir cache) plus a strict
+typecheck — but the plugin has **not yet been exercised against a live vision endpoint or a
+real DSH web GUI session**. Expect rough edges until that verification happens.
 
 ## Known limitations
 

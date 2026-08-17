@@ -1,11 +1,14 @@
 # dsh-llm-vision
 
+[English](README.md) | 中文
+
 **给纯文本模型可靠视觉 + OCR 的 DeepSeek Harness 插件。**
 
 沉淀了让截图 QA 可信的提示词工程、可靠性工程（预处理 / 重试 / 持久缓存），
 并补齐 DSH 原生体验——粘贴桥、免重启设置卡、URL 输入、附件引用。
 
-> **状态**：v1 已上线 GitHub——npm 发布待办。
+> **状态**：v1 源码已上线 GitHub——**尚未发布到 npm**，也尚未对真实视觉端点验证
+> （目前由 183 个离线测试覆盖）。
 
 ## 为什么需要它
 
@@ -14,7 +17,7 @@
 
 | 工具 | 用途 |
 |---|---|
-| `describe_image` | 双视角图像理解：**normal**（自然描述）与 **critical**（审视视角——客观描述并主动报告文字错位、遮挡、重叠、换行异常、元素缺失，区分事实与推测）。critical 是实测沉淀的「视觉模型会给渲染 bug 找补」解药：页面/界面问题报告与截图对照设计稿时必用。 |
+| `describe_image` | 双视角图像理解：**normal**（自然描述）与 **critical**（审视视角——客观描述并主动报告文字错位、遮挡、重叠、换行异常、元素缺失，区分事实与推测）。critical 是「视觉模型会给渲染 bug 找补」的解药：页面/界面问题报告与截图对照设计稿时必用。 |
 | `extract_text` | 走专用 OCR 模型的文字提取——证件、发票、回执；按需结构化输出（JSON/CSV）；只提取真实可见内容、绝不补全猜测。 |
 
 DSH 原生体验：
@@ -26,6 +29,29 @@ DSH 原生体验：
 - **图片永不进入会话记录**——只有返回文字进入对话。
 
 ## 安装
+
+**尚未发布到 npm。** `dsh plugin add <包名>` 会按包名到 npm registry 解析，所以一行命令
+要等发布后才能用。目前请用本地 tarball 或 checkout 安装：
+
+### 方式一：tarball（推荐）
+
+```sh
+# 在本仓库目录下：
+pnpm install && pnpm build && pnpm pack        # → dsh-llm-vision-0.1.0.tgz
+dsh plugin --profile web add ./dsh-llm-vision-0.1.0.tgz
+```
+
+tarball 自带预构建的 `lib/`（node 半 + `lib/client.js`），安装方无需执行构建。
+
+### 方式二：本地 checkout
+
+```sh
+git clone https://github.com/1710782766/dsh-llm-vision.git
+cd dsh-llm-vision && pnpm install && pnpm build   # lib/ 被 gitignore——必须先构建
+dsh plugin --profile web add /绝对路径/dsh-llm-vision
+```
+
+### 发布到 npm 之后
 
 ```sh
 dsh plugin --profile web add dsh-llm-vision
@@ -87,6 +113,11 @@ dsh plugin --profile web add dsh-llm-vision
 - 附件上传先校验（严格 base64、magic bytes、字节上限）再交给附件存储；只有引用 JSON（文本）进入会话。
 - 响应体先按上限截断（`maxOutputTokens × 8 + 64 KiB`）再解析；错误摘要有界（200 字符）。
 - 调用工具即把图片字节外发到所配端点——只把允许外传的图片交给模型。
+
+## 测试状态
+
+183 个离线单元/集成测试（vitest、mock HTTP 服务、tmp 目录缓存）加严格 typecheck——但插件
+**尚未在真实视觉端点和真实 DSH Web GUI 会话中验证过**。在完成该验证前，请对边界情况有预期。
 
 ## 已知限制
 
