@@ -99,7 +99,7 @@ VISION_API_KEY=sk-...
 | `normalPrompt` | 内置 | `describe_image` normal 视角在模型未传 prompt 时使用。 |
 | `ocrPrompt` | 内置 | `extract_text` 在模型未传 prompt 时使用。 |
 | `apiStyle` | `chat-completions` | `chat-completions` 或 `responses`。 |
-| `maxBytes` | `10485760` | 图片字节上限（本地与下载一致）。 |
+| `maxBytes` | `10485760` | 图片字节上限（本地与下载一致）。高清 PNG 壁纸（10–30MB）会超默认值；调大即可——加载后预处理会接管压缩。 |
 | `maxOutputTokens` | `1024` | 发给端点的输出 token 上限。 |
 | `timeoutMs` | `60000` | 单次尝试超时。 |
 | `maxRetries` | `2` | 瞬时错误（超时/网络/429/5xx）重试次数；0 禁用。 |
@@ -144,7 +144,9 @@ patch 层——见[配置](#配置)。
 
 - 仅 PNG / JPEG / GIF / WebP（magic-byte 门；与宿主附件管线一致）。
 - 单图单答：不支持多图输入或对上一张图的追问。
-- 预处理依赖 macOS `sips`；其他平台靠超时 + 重试兜底。
+- 预处理依赖 macOS `sips`（零依赖）；Windows/Linux 上静默降级、原样直发——
+  绝不报错，但超大图更易超时。字节边界（`maxBytes`）在加载阶段把关，
+  边界过小是干净的拒绝，不会崩溃。
 
 ## 开发
 

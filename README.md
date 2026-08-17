@@ -109,7 +109,7 @@ this gap instead of vanishing.
 | `normalPrompt` | built-in | `describe_image` normal-perspective prompt when the model passes none. |
 | `ocrPrompt` | built-in | `extract_text` prompt when the model passes none. |
 | `apiStyle` | `chat-completions` | `chat-completions` or `responses`. |
-| `maxBytes` | `10485760` | Image byte bound (local files and downloads). |
+| `maxBytes` | `10485760` | Image byte bound (local files and downloads). Hi-res PNG wallpapers (10–30 MB) exceed the default; raise it — preprocessing compresses after loading. |
 | `maxOutputTokens` | `1024` | Output-token cap sent to the endpoint. |
 | `timeoutMs` | `60000` | Per-attempt timeout. |
 | `maxRetries` | `2` | Retries for transient failures (timeout / network / 429 / 5xx); 0 disables. |
@@ -165,7 +165,10 @@ layer — see [Configure](#configure).
 
 - PNG / JPEG / GIF / WebP only (magic-byte gate; the host attachment pipeline shares the same set).
 - Single image per call — no multi-image input or follow-up questions against a previous image.
-- Preprocessing relies on macOS `sips`; other platforms fall back to timeout + retry.
+- Preprocessing relies on macOS `sips` (zero dependencies); on Windows/Linux the
+  plugin degrades silently and sends the original bytes — never an error, but
+  oversized images are then likelier to time out. The bound gates loading
+  (`maxBytes`), so a too-small bound is a clean rejection, never a crash.
 
 ## Development
 
