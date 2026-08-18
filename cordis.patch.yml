@@ -2,10 +2,12 @@
 # tool plugin row into the web profile roster. Applied as a profile bundle
 # layer (the dsh.bundle.patch manifest field).
 #
-# Install (not yet published to npm — use a tarball or local checkout):
-#   pnpm install && pnpm build && pnpm pack   # from this repo
-#   dsh plugin --profile web add ./dsh-llm-vision-0.1.0.tgz
-# Once published to npm: dsh plugin --profile web add dsh-llm-vision
+# Install (published to npm; the version is pinned because pnpm 11 holds back
+# releases younger than 24h — bump this line with every release):
+#   dsh plugin --profile web add dsh-llm-vision@0.2.2
+# From a source checkout (tarball name follows the current version):
+#   pnpm install && pnpm build && pnpm pack
+#   dsh plugin --profile web add ./dsh-llm-vision-<version>.tgz
 #
 # One package, both halves: the node half (exports ".") runs in the host
 # process and registers the model-facing describe_image + extract_text tools,

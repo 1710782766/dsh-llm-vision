@@ -41,14 +41,18 @@ DSH 原生体验：
 ## 安装
 
 ```sh
-dsh plugin --profile web add dsh-llm-vision
+dsh plugin --profile web add dsh-llm-vision@0.2.2
 ```
 
-从源码 checkout 安装时，同一命令接受 tarball 或本地路径：
+版本号是刻意钉扎的：pnpm 11 会暂缓 24 小时内新发布的包，裸 `add dsh-llm-vision`
+（latest）在发版当天会静默装到上一版。本行随每次发版同步更新。
+
+从源码 checkout 安装时，同一命令接受 tarball 或本地路径
+（`pnpm pack` 以当前版本命名 tarball——请使用实际产出的文件名）：
 
 ```sh
-pnpm install && pnpm build && pnpm pack   # → dsh-llm-vision-0.1.0.tgz
-dsh plugin --profile web add ./dsh-llm-vision-0.1.0.tgz
+pnpm install && pnpm build && pnpm pack   # → dsh-llm-vision-<版本号>.tgz
+dsh plugin --profile web add ./dsh-llm-vision-<版本号>.tgz
 # 或：dsh plugin --profile web add /路径/dsh-llm-vision   （先 build——lib/ 被 gitignore）
 ```
 

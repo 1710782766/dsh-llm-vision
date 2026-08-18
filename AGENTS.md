@@ -37,7 +37,9 @@ hallucinate on screenshots"**——critical 审视视角（实测沉淀）+ 可�
                             → callVision（双协议 chat-completions/responses，多图 content
                               数组，重试/退避）
       → health.ts           runHealthCheck：apiKey 解析 + GET /models 探测（401/404/网络分类）
-                            + 可选 testCall 1×1 图端到端；报告为领域 JSON，绝不 throw
+                            + 可选 testCall 64×64 探针图端到端（不得改回 1×1——
+                            qwen3-vl-plus 拒绝最小尺寸输入，有防回归测试钉住）；
+                            报告为领域 JSON，绝不 throw
       → attach-routes.ts    /llm-vision/attach 上传路由 + /llm-vision/raw 回读（内容寻址 id；
                             body cap 随 maxBytes 动态放大；附件通道仅收官方 4 类媒体，
                             HEIC/HEIF 上传明确拒绝并提示走路径）
@@ -93,8 +95,11 @@ deepseek-harness）与 zhu1090093659/dsh-web-ui（Apache-2.0）；llm_vision（M
 1. `pnpm typecheck && pnpm test && pnpm build` 全绿；CI（.github/workflows/ci.yml）通过
 2. `pnpm pack` 产物含 lib/（node 半 + lib/client.js）与 cordis.patch.yml
 3. 版本号与 git tag 同步；README 状态行从"未发布"更新为发布版本
-4. 发布后立即验证：`dsh plugin --profile web add dsh-llm-vision` 安装成功 + bundle 层生效
-5. 记得给 GitHub Release 附变更摘要（git tag + 说明）
+4. **同步更新安装钉扎版本**：README ×2 Install 主命令、cordis.patch.yml 头注释里的
+   `dsh-llm-vision@<version>` 一并改到新版本（pnpm 11 暂缓 24h 内新发布，装 latest
+   会拿到旧版；漏改一处用户就会装到上一版）
+5. 发布后立即验证：`dsh plugin --profile web add dsh-llm-vision@<version>` 安装成功 + bundle 层生效
+6. 记得给 GitHub Release 附变更摘要（git tag + 说明）
 
 **安装路径事实（写文档/注释时不许再写错）**：
 - `dsh plugin add <name>` 是 pnpm 转发器，按包名从 npm registry 解析——未发布时

@@ -47,14 +47,19 @@ Plus the DSH-native experience:
 ## Install
 
 ```sh
-dsh plugin --profile web add dsh-llm-vision
+dsh plugin --profile web add dsh-llm-vision@0.2.2
 ```
 
-From a source checkout the same command accepts a tarball or local path:
+The version is pinned on purpose: pnpm 11 holds back packages published in the
+last 24 hours, so a bare `add dsh-llm-vision` (latest) would silently install
+the previous release on launch day. This line is bumped with every release.
+
+From a source checkout the same command accepts a tarball or local path
+(`pnpm pack` names the tarball after the current version — use that name):
 
 ```sh
-pnpm install && pnpm build && pnpm pack   # → dsh-llm-vision-0.1.0.tgz
-dsh plugin --profile web add ./dsh-llm-vision-0.1.0.tgz
+pnpm install && pnpm build && pnpm pack   # → dsh-llm-vision-<version>.tgz
+dsh plugin --profile web add ./dsh-llm-vision-<version>.tgz
 # or: dsh plugin --profile web add /path/to/dsh-llm-vision   (build first — lib/ is gitignored)
 ```
 
