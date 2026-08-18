@@ -38,9 +38,14 @@ export interface HealthReport {
 /** Endpoint-probe timeout in milliseconds (short: a health check should answer fast). */
 export const HEALTH_PROBE_TIMEOUT_MS = 10_000
 
-/** A 1×1 transparent PNG: the cheapest end-to-end test image. */
-const HEALTH_PNG_BYTES = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+/**
+ * The probe image for end-to-end test calls: a 64×64 white PNG. Not 1×1 —
+ * several endpoints reject sub-minimum sizes (qwen3-vl-plus: "image length
+ * and width do not meet the model restrictions"), which made the original
+ * 1×1 probe fail where the real pipeline was healthy.
+ */
+export const HEALTH_PNG_BYTES = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAXklEQVR4nO3PMQ0AMAzAsPInvYLYYVWKESTzjhsd8KsBrQGtAa0BrQGtAa0BrQGtAa0BrQGtAa0BrQGtAa0BrQGtAa0BrQGtAa0BbQHKU9LC7/CP1AAAAABJRU5ErkJggg==',
   'base64',
 )
 

@@ -75,7 +75,7 @@ export type { LoadedImage, VisionCache, AnswerCache } from './vision-client.ts'
 export { preprocessImage, DEFAULT_MAX_EDGE } from './preprocess.ts'
 export { PersistentAnswerCache, defaultCacheDir, semanticCacheKey, imageDigest, DEFAULT_MAX_ENTRIES, DEFAULT_TTL_DAYS } from './cache.ts'
 export { DEFAULT_CRITICAL_DESCRIBE_PROMPT, DEFAULT_NORMAL_DESCRIBE_PROMPT, DEFAULT_OCR_PROMPT } from './prompts.ts'
-export { runHealthCheck, HEALTH_PROBE_TIMEOUT_MS } from './health.ts'
+export { runHealthCheck, HEALTH_PROBE_TIMEOUT_MS, HEALTH_PNG_BYTES } from './health.ts'
 export type { HealthCheck, HealthReport, HealthStatus } from './health.ts'
 
 /** Accepted describe_image perspectives. */

@@ -168,4 +168,15 @@ describe('llm_vision_check', () => {
     const value = valueOf(result)
     expect(JSON.stringify(value)).not.toContain('sk-health')
   })
+
+  it('uses a probe image large enough for real endpoints (not 1×1)', () => {
+    // Regression: the original 1×1 probe was rejected by qwen3-vl-plus
+    // ("image length and width do not meet the model restrictions").
+    const bytes = tool.HEALTH_PNG_BYTES
+    expect(bytes.subarray(12, 16).toString('ascii')).toBe('IHDR')
+    const width = bytes.readUInt32BE(16)
+    const height = bytes.readUInt32BE(20)
+    expect(width).toBeGreaterThanOrEqual(32)
+    expect(height).toBeGreaterThanOrEqual(32)
+  })
 })

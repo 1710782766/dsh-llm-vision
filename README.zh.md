@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/1710782766/dsh-llm-vision.svg)](https://github.com/1710782766/dsh-llm-vision)
 [![CI](https://github.com/1710782766/dsh-llm-vision/actions/workflows/ci.yml/badge.svg)](https://github.com/1710782766/dsh-llm-vision/actions/workflows/ci.yml)
-[![Node](https://img.shields.io/badge/node-%3E%3D22-blue.svg)](package.json)
+[![Node](<https://img.shields.io/badge/node-%3E%3D22-blue.svg>)](package.json)
 
 **给纯文本模型可靠视觉 + OCR 的 DeepSeek Harness 插件。**
 
@@ -22,11 +22,11 @@
 纯文本模型（DeepSeek V4、GLM 文本系列……）看不了图。本插件注册面向模型的工具，
 后端是任意 OpenAI 兼容视觉端点：
 
-| 工具 | 用途 |
-|---|---|
-| `describe_image` | 双视角图像理解：**normal**（自然描述）与 **critical**（审视视角——客观描述并主动报告文字错位、遮挡、重叠、换行异常、元素缺失，区分事实与推测）。critical 是「视觉模型会给渲染 bug 找补」的解药：页面/界面问题报告与截图对照设计稿时必用。支持单张 `image` 或一次最多 8 张的 `images` 批量读取。 |
-| `extract_text` | 走专用 OCR 模型的文字提取——证件、发票、回执；按需结构化输出（JSON/CSV）；只提取真实可见内容、绝不补全猜测。 |
-| `llm_vision_check` | 诊断：验证配置、API key 能否解析、端点能否通过带鉴权的探测——可选 `testCall` 发一次真实端到端视觉调用。报告里绝不出现密钥本身。 |
+| 工具                 | 用途                                                                                                                                                                                                                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `describe_image`   | 双视角图像理解：**normal**（自然描述）与 **critical**（审视视角——客观描述并主动报告文字错位、遮挡、重叠、换行异常、元素缺失，区分事实与推测）。critical 是「视觉模型会给渲染 bug 找补」的解药：页面/界面问题报告与截图对照设计稿时必用。支持单张 `image` 或一次最多 8 张的 `images` 批量读取。 |
+| `extract_text`     | 走专用 OCR 模型的文字提取——证件、发票、回执；按需结构化输出（JSON/CSV）；只提取真实可见内容、绝不补全猜测。                                                                                                                                                                                                    |
+| `llm_vision_check` | 诊断：验证配置、API key 能否解析、端点能否通过带鉴权的探测——可选`testCall` 发一次真实端到端视觉调用。报告里绝不出现密钥本身。                                                                                                                                                                                |
 
 DSH 原生体验：
 
@@ -119,30 +119,30 @@ ZHIPU_API_KEY=你的智谱密钥   # https://open.bigmodel.cn——免费额度�
 OCR 复用同一视觉模型（`extract_text` 用 OCR 提示词驱动）——免费层有限速，
 更适合交互使用而非批量跑。
 
-| 键 | 默认 | 含义 |
-|---|---|---|
-| `provider` | `custom` | 端点预设：`custom`（全部字段显式）、`dashscope`、`zhipu`（免费 GLM-4V-Flash）、`gemini`（免费 key）。显式字段优先。 |
-| `baseURL` | —（`custom` 必填） | OpenAI 兼容根地址；按 `apiStyle` 追加 /chat/completions 或 /responses。 |
-| `model` | `qwen3-vl-plus` | `describe_image` 使用的视觉模型；可带思考后缀 `:off/:low/:medium/:high`。 |
-| `ocrModel` | `qwen3.5-ocr` | `extract_text` 使用的 OCR 模型；同样支持后缀。 |
-| `apiKey` | — | 内联密钥；建议用 `apiKeyEnv`。schema 标记为 secret。 |
-| `apiKeyEnv` | `VISION_API_KEY` | 凭证引用（环境变量名），经凭证服务解析；空字符串禁用。 |
-| `criticalPrompt` | 内置 | `describe_image` critical 视角在模型未传 prompt 时使用。 |
-| `normalPrompt` | 内置 | `describe_image` normal 视角在模型未传 prompt 时使用。 |
-| `ocrPrompt` | 内置 | `extract_text` 在模型未传 prompt 时使用。 |
-| `apiStyle` | `chat-completions` | `chat-completions` 或 `responses`。 |
-| `maxBytes` | `10485760` | 图片字节上限（本地与下载一致）。高清 PNG 壁纸（10–30MB）会超默认值；调大即可——加载后预处理会接管压缩。 |
-| `maxOutputTokens` | `1024` | 发给端点的输出 token 上限。 |
-| `timeoutMs` | `60000` | 单次尝试超时。 |
-| `maxRetries` | `2` | 瞬时错误（超时/网络/429/5xx）重试次数；0 禁用。 |
-| `maxEdge` | `1568` | 图片最大边长（像素），超限自动缩放；0 禁用预处理。 |
-| `compressEnabled` | `true` | 超大图自动缩放/重压（macOS `sips`；其他平台跳过）。 |
-| `cacheEnabled` | `true` | 持久内容寻址缓存（跨会话复用）。 |
-| `cacheDir` | `$XDG_CACHE_HOME/dsh-llm-vision` | 缓存目录。 |
-| `cacheTtlDays` | `30` | 缓存保留天数。 |
-| `cacheMaxEntries` | `500` | 缓存条数上限，超限淘汰最旧。 |
-| `renderImagePreview` | `true` | 附件引用原地渲染缩略图（仅影响本地显示）。 |
-| `interceptImageSend` | `true` | 发送时改写带图消息为附件引用；关闭则原样放行（与其他视觉插件共用时）。 |
+| 键                     | 默认                               | 含义                                                                                                                        |
+| ---------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `provider`           | `custom`                         | 端点预设：`custom`（全部字段显式）、`dashscope`、`zhipu`（免费 GLM-4V-Flash）、`gemini`（免费 key）。显式字段优先。 |
+| `baseURL`            | —（`custom` 必填）              | OpenAI 兼容根地址；按`apiStyle` 追加 /chat/completions 或 /responses。                                                    |
+| `model`              | `qwen3-vl-plus`                  | `describe_image` 使用的视觉模型；可带思考后缀 `:off/:low/:medium/:high`。                                               |
+| `ocrModel`           | `qwen3.5-ocr`                    | `extract_text` 使用的 OCR 模型；同样支持后缀。                                                                            |
+| `apiKey`             | —                                 | 内联密钥；建议用`apiKeyEnv`。schema 标记为 secret。                                                                       |
+| `apiKeyEnv`          | `VISION_API_KEY`                 | 凭证引用（环境变量名），经凭证服务解析；空字符串禁用。                                                                      |
+| `criticalPrompt`     | 内置                               | `describe_image` critical 视角在模型未传 prompt 时使用。                                                                  |
+| `normalPrompt`       | 内置                               | `describe_image` normal 视角在模型未传 prompt 时使用。                                                                    |
+| `ocrPrompt`          | 内置                               | `extract_text` 在模型未传 prompt 时使用。                                                                                 |
+| `apiStyle`           | `chat-completions`               | `chat-completions` 或 `responses`。                                                                                     |
+| `maxBytes`           | `10485760`                       | 图片字节上限（本地与下载一致）。高清 PNG 壁纸（10–30MB）会超默认值；调大即可——加载后预处理会接管压缩。                   |
+| `maxOutputTokens`    | `1024`                           | 发给端点的输出 token 上限。                                                                                                 |
+| `timeoutMs`          | `60000`                          | 单次尝试超时。                                                                                                              |
+| `maxRetries`         | `2`                              | 瞬时错误（超时/网络/429/5xx）重试次数；0 禁用。                                                                             |
+| `maxEdge`            | `1568`                           | 图片最大边长（像素），超限自动缩放；0 禁用预处理。                                                                          |
+| `compressEnabled`    | `true`                           | 超大图自动缩放/重压（macOS`sips`；其他平台跳过）。                                                                        |
+| `cacheEnabled`       | `true`                           | 持久内容寻址缓存（跨会话复用）。                                                                                            |
+| `cacheDir`           | `$XDG_CACHE_HOME/dsh-llm-vision` | 缓存目录。                                                                                                                  |
+| `cacheTtlDays`       | `30`                             | 缓存保留天数。                                                                                                              |
+| `cacheMaxEntries`    | `500`                            | 缓存条数上限，超限淘汰最旧。                                                                                                |
+| `renderImagePreview` | `true`                           | 附件引用原地渲染缩略图（仅影响本地显示）。                                                                                  |
+| `interceptImageSend` | `true`                           | 发送时改写带图消息为附件引用；关闭则原样放行（与其他视觉插件共用时）。                                                      |
 
 ## 可靠性工程
 
