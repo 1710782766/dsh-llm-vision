@@ -40,17 +40,23 @@ interface CacheEntry {
 
 type EntryMap = Record<string, CacheEntry>
 
-/** Build the content-addressed cache key for one request. */
+/**
+ * Build the content-addressed cache key for one request. A single digest keeps
+ * the v1 key layout (digest strings carry no colon, so the join is unchanged
+ * and previously cached answers still hit); multi-image reads key on the
+ * digest list instead.
+ */
 export function semanticCacheKey(parts: {
-  imageDigest: string
+  imageDigest: string | string[]
   model: string
   prompt: string
   maxEdge: number
   compressEnabled: boolean
   apiStyle: string
 }): string {
+  const digestField = Array.isArray(parts.imageDigest) ? parts.imageDigest.join(',') : parts.imageDigest
   const joined = [
-    parts.imageDigest,
+    digestField,
     parts.model,
     parts.prompt,
     parts.maxEdge,

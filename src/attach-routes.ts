@@ -15,11 +15,16 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
-import { decodeBase64, isImageMimeType, sniffMimeType, DEFAULT_MAX_BYTES, type ImageMimeType } from './media.ts'
+import type { ImageAttachmentRef, ImageMediaType } from '@deepseek-ai/dsh-attachment'
+import { decodeBase64, isAttachMediaType, sniffMimeType, ATTACH_MEDIA_TYPES, DEFAULT_MAX_BYTES } from './media.ts'
 
 /** Request-body byte cap: base64 of a {@link DEFAULT_MAX_BYTES} image plus envelope slack. */
 export const MAX_ATTACH_BODY_BYTES = 16 * 1024 * 1024
+
+/** The request-body cap for one attach: the image bound re-encoded to base64 (~4/3x) plus slack. */
+export function attachBodyCap(maxBytes: number): number {
+  return Math.max(MAX_ATTACH_BODY_BYTES, Math.ceil(maxBytes * 4 / 3) + 256 * 1024)
+}
 
 /** Stable error codes the browser half surfaces without leaking internals. */
 export interface AttachError {
@@ -33,7 +38,7 @@ export interface AttachPayload {
   /** Base64-encoded image bytes (standard alphabet). */
   data: string
   /** Media type the sender declares; verified against magic bytes. */
-  mediaType: ImageMimeType
+  mediaType: ImageMediaType
   /** Optional display name; never interpreted as a path. */
   name?: string
 }
@@ -119,8 +124,8 @@ export function validateAttachPayload(payload: unknown, maxBytes: number): { pay
   if (typeof data !== 'string' || data.length === 0) {
     return { error: { code: 'rejected', message: 'image data must be a non-empty base64 string' } }
   }
-  if (!isImageMimeType(mediaType)) {
-    return { error: { code: 'rejected', message: 'mediaType must be one of image/png, image/jpeg, image/gif, image/webp' } }
+  if (!isAttachMediaType(mediaType)) {
+    return { error: { code: 'rejected', message: `mediaType must be one of ${ATTACH_MEDIA_TYPES.join(', ')} (HEIC/HEIF: pass the local path to the tools instead)` } }
   }
   if (name !== undefined && (typeof name !== 'string' || name.length === 0)) {
     return { error: { code: 'rejected', message: 'name must be a non-empty string when present' } }
@@ -266,9 +271,9 @@ export function registerAttachRoute(ctx: Context, readMaxBytes: () => number = (
         json(res, { ok: false, error: METHOD_NOT_ALLOWED }, 405)
         return
       }
-      const body = await readJsonBody(req, MAX_ATTACH_BODY_BYTES)
+      const body = await readJsonBody(req, attachBodyCap(readMaxBytes()))
       if (body === null) {
-        json(res, { ok: false, error: { code: 'internal', message: 'request body must be JSON within 16 MiB' } }, 400)
+        json(res, { ok: false, error: { code: 'internal', message: 'request body must be JSON within the image-bound base64 cap' } }, 400)
         return
       }
       const outcome = await handleAttach(ctx, readMaxBytes(), body)

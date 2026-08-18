@@ -160,13 +160,14 @@ afterEach(async () => {
 })
 
 describe('schema and call view', () => {
-  it('registers describe_image with an image argument and an optional prompt', async () => {
+  it('registers describe_image with image/images arguments and an optional prompt', async () => {
     const ctx = await setup()
     const schema = ctx.tools.schemas().find(s => s.name === 'describe_image')
     expect(schema).toBeDefined()
     const props = (schema!.parameters as { properties?: Record<string, unknown> }).properties ?? {}
-    expect(Object.keys(props).sort()).toEqual(['image', 'perspective', 'prompt'])
+    expect(Object.keys(props).sort()).toEqual(['image', 'images', 'perspective', 'prompt'])
     expect((props.image as { type?: string }).type).toBe('string')
+    expect((props.images as { type?: string }).type).toBe('array')
   })
 
   it('renders a read card with the file location for local paths and none for URLs', () => {
@@ -888,5 +889,105 @@ describe('resolveConfig, sniffing, and bounded reads', () => {
       },
     }))
     expect(await tool.readBoundedText(split, 10)).toBe('a'.repeat(9) + 'b')
+  })
+})
+
+describe('batch describe_image (images)', () => {
+  it('reads several images in one call and answers with the unified payload', async () => {
+    const server = await startMockServer((_request, res) => { jsonReply(res, 200, chatReply('One visual family.')) })
+    cleanup.push(server.close)
+    const ctx = await setup({ baseURL: server.url })
+    const first = await tempPng()
+    const second = await tempPng()
+
+    const result = await callDescribe(ctx, { images: [first, second], prompt: 'are these the same family?' })
+    expect(result.isError).toBe(false)
+    if (result.isError) throw new Error('expected describe_image success')
+    expect(result.value).toMatchObject({
+      text: 'One visual family.',
+      image: first,
+      images: [first, second],
+      mimeType: 'image/png',
+      bytes: PNG_BYTES.length * 2,
+    })
+
+    const content = sentContent(server.request(0)) as Array<{ type: string; text?: string; image_url?: { url?: string } }>
+    expect(content[0]).toEqual({ type: 'text', text: 'are these the same family?' })
+    const imageParts = content.filter(part => part.type === 'image_url')
+    expect(imageParts).toHaveLength(2)
+    for (const part of imageParts) {
+      expect(part.image_url?.url).toMatch(/^data:image\/png;base64,/)
+    }
+  })
+
+  it('prefers images over image when both are given', async () => {
+    const server = await startMockServer((_request, res) => { jsonReply(res, 200, chatReply('ok')) })
+    cleanup.push(server.close)
+    const ctx = await setup({ baseURL: server.url })
+    const single = await tempPng()
+    const first = await tempPng()
+    const second = await tempPng()
+
+    const result = await callDescribe(ctx, { image: single, images: [first, second] })
+    expect(result.isError).toBe(false)
+    if (result.isError) throw new Error('expected describe_image success')
+    expect(result.value).toMatchObject({ image: first, images: [first, second] })
+    const content = sentContent(server.request(0)) as Array<{ type: string }>
+    expect(content.filter(part => part.type === 'image_url')).toHaveLength(2)
+  })
+
+  it('rejects a call with neither image nor images', async () => {
+    const ctx = await setup()
+    const result = await callDescribe(ctx, { prompt: 'hi' })
+    expect(result.isError).toBe(true)
+    expect(errorText(result)).toContain('llm-vision: provide image (single) or images (batch)')
+  })
+
+  it('rejects more than MAX_IMAGES images', async () => {
+    const ctx = await setup()
+    const paths = await Promise.all(Array.from({ length: tool.MAX_IMAGES + 1 }, () => tempPng()))
+    const result = await callDescribe(ctx, { images: paths })
+    expect(result.isError).toBe(true)
+    expect(errorText(result)).toContain(`at most ${tool.MAX_IMAGES} images per call`)
+  })
+
+  it('rejects a batch containing a non-string entry (framework argument validation)', async () => {
+    const ctx = await setup()
+    const path = await tempPng()
+    const result = await callDescribe(ctx, { images: [path, 42] })
+    expect(result.isError).toBe(true)
+    expect(errorText(result)).toContain('must be a string')
+  })
+
+  it('fails the whole batch when one image cannot be loaded', async () => {
+    const server = await startMockServer((_request, res) => { jsonReply(res, 200, chatReply('ok')) })
+    cleanup.push(server.close)
+    const ctx = await setup({ baseURL: server.url })
+    const path = await tempPng()
+    const missing = join(await mkdtemp(join(tmpdir(), 'dsh-llm-vision-missing-')), 'nope.png')
+
+    const result = await callDescribe(ctx, { images: [path, missing] })
+    expect(result.isError).toBe(true)
+    expect(errorText(result)).toContain('llm-vision:')
+    expect(server.requests).toHaveLength(0)
+  })
+
+  it('hits the persistent cache for a repeated single image but not for a changed batch', async () => {
+    const server = await startMockServer((_request, res) => { jsonReply(res, 200, chatReply('cached')) })
+    cleanup.push(server.close)
+    const ctx = await setup({ baseURL: server.url })
+    const first = await tempPng()
+    const second = await tempPng()
+
+    const single = await callDescribe(ctx, { image: first })
+    expect(single.isError).toBe(false)
+    // Same single image again: served from the cache, no second request.
+    const repeat = await callDescribe(ctx, { image: first })
+    expect(repeat.isError).toBe(false)
+    if (!repeat.isError) expect(repeat.value).toMatchObject({ text: 'cached' })
+    // A two-image batch with the same first image is a different key: a new request.
+    const batch = await callDescribe(ctx, { images: [first, second] })
+    expect(batch.isError).toBe(false)
+    expect(server.requests).toHaveLength(2)
   })
 })

@@ -49,6 +49,50 @@ export const DEFAULT_VISION_MODEL = 'qwen3-vl-plus'
 /** The default OCR model (llm_vision parity: qwen3.5-ocr). */
 export const DEFAULT_OCR_MODEL = 'qwen3.5-ocr'
 
+/** The `provider` switch values: 'custom' means every endpoint field is explicit. */
+export const PROVIDER_IDS = ['custom', 'dashscope', 'zhipu', 'gemini'] as const
+export type ProviderId = typeof PROVIDER_IDS[number]
+/** The provider used when the configuration names none. */
+export const DEFAULT_PROVIDER: ProviderId = 'custom'
+
+/** One built-in endpoint preset: a provider switch fills baseURL / model / ocrModel / apiKeyEnv. */
+export interface ProviderPreset {
+  /** Root of the OpenAI-compatible endpoint. */
+  baseURL: string
+  /** Vision model id for describe_image. */
+  model: string
+  /** OCR model id for extract_text; free presets reuse the vision model (prompt-driven OCR). */
+  ocrModel: string
+  /** Environment-variable name this provider's key is conventionally stored under. */
+  apiKeyEnv: string
+}
+
+/**
+ * The shipped provider presets. Free-tier facts verified 2026-08 against the
+ * community provider registry and the Google AI docs; policies change, so the
+ * model ids live here — one edit re-targets every preset user.
+ */
+export const PROVIDER_PRESETS: Record<Exclude<ProviderId, 'custom'>, ProviderPreset> = {
+  dashscope: {
+    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: DEFAULT_VISION_MODEL,
+    ocrModel: DEFAULT_OCR_MODEL,
+    apiKeyEnv: 'DASHSCOPE_API_KEY',
+  },
+  zhipu: {
+    baseURL: 'https://open.bigmodel.cn/api/paas/v4',
+    model: 'glm-4.6v-flash',
+    ocrModel: 'glm-4.6v-flash',
+    apiKeyEnv: 'ZHIPU_API_KEY',
+  },
+  gemini: {
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    model: 'gemini-3.7-flash',
+    ocrModel: 'gemini-3.7-flash',
+    apiKeyEnv: 'GEMINI_API_KEY',
+  },
+}
+
 /**
  * Split a model id into the id the endpoint receives and its thinking-level suffix. A trailing
  * :off / :low / :medium / :high is the plugin's shorthand for the thinking control:
@@ -70,6 +114,12 @@ export function splitModelSuffix(model: string): { model: string; thinking: Thin
  * composition entries and provides defaults for everything else.
  */
 export interface Config {
+  /**
+   * Endpoint preset to fill baseURL / model / ocrModel / apiKeyEnv from;
+   * defaults to 'custom' (every field explicit). Explicit config fields
+   * always win over the preset.
+   */
+  provider?: ProviderId
   /** Root of the OpenAI-compatible endpoint, e.g. https://dashscope.aliyuncs.com/compatible-mode/v1; trailing slashes are stripped. */
   baseURL?: string
   /** Vision model id for describe_image, optionally with a thinking suffix (:off/:low/:medium/:high). */
@@ -124,6 +174,7 @@ export interface Config {
 
 /** Schemastery configuration for the llm-vision tools; doubles as the llm-vision settings-section schema. */
 export const Config: z<Config> = z.object({
+  provider: z.union(PROVIDER_IDS).default(DEFAULT_PROVIDER),
   baseURL: z.string(),
   model: z.string().default(DEFAULT_VISION_MODEL),
   ocrModel: z.string().default(DEFAULT_OCR_MODEL),
@@ -152,6 +203,8 @@ export const LLM_VISION_SETTINGS_NAMESPACE = settingsNamespace('llm-vision')
 
 /** One resolved, validated configuration snapshot; defaults and beyond-schema constraints applied. */
 export interface ResolvedConfig {
+  /** The configured provider switch; 'custom' when the configuration named none. */
+  provider: ProviderId
   baseURL: string
   model: string
   ocrModel: string
@@ -186,20 +239,25 @@ export interface ResolvedConfig {
  * @returns validated facts.
  */
 export function resolveConfig(config: Config): ResolvedConfig {
-  const baseURL = (config.baseURL ?? '').trim().replace(/\/+$/, '')
+  const provider = config.provider ?? DEFAULT_PROVIDER
+  if (!PROVIDER_IDS.includes(provider)) {
+    throw new Error(`llm-vision: provider must be one of ${PROVIDER_IDS.map(id => JSON.stringify(id)).join(', ')}`)
+  }
+  const preset = provider === 'custom' ? undefined : PROVIDER_PRESETS[provider]
+  const baseURL = (config.baseURL ?? preset?.baseURL ?? '').trim().replace(/\/+$/, '')
   if (!/^https?:\/\//.test(baseURL)) {
     throw new Error('llm-vision: baseURL must be an absolute http(s) URL')
   }
-  const { model, thinking } = splitModelSuffix(config.model ?? DEFAULT_VISION_MODEL)
+  const { model, thinking } = splitModelSuffix(config.model ?? preset?.model ?? DEFAULT_VISION_MODEL)
   if (model.length === 0) throw new Error('llm-vision: model must be a non-empty model id before any :off/:low/:medium/:high suffix')
-  const { model: ocrModel, thinking: ocrThinking } = splitModelSuffix(config.ocrModel ?? DEFAULT_OCR_MODEL)
+  const { model: ocrModel, thinking: ocrThinking } = splitModelSuffix(config.ocrModel ?? preset?.ocrModel ?? DEFAULT_OCR_MODEL)
   if (ocrModel.length === 0) throw new Error('llm-vision: ocrModel must be a non-empty model id before any :off/:low/:medium/:high suffix')
   const apiKey = config.apiKey
   if (apiKey !== undefined && apiKey.length === 0) {
     throw new Error('llm-vision: apiKey must be non-empty when set')
   }
   let apiKeyEnv: CredentialRef | undefined
-  const rawEnv = config.apiKeyEnv ?? DEFAULT_API_KEY_ENV
+  const rawEnv = config.apiKeyEnv ?? preset?.apiKeyEnv ?? DEFAULT_API_KEY_ENV
   if (rawEnv.length > 0) {
     try {
       apiKeyEnv = credentialRef(rawEnv)
@@ -230,6 +288,7 @@ export function resolveConfig(config: Config): ResolvedConfig {
     throw new Error(`llm-vision: apiStyle must be one of ${API_STYLES.map(style => JSON.stringify(style)).join(', ')}`)
   }
   return {
+    provider,
     baseURL,
     model,
     ocrModel,

@@ -24,14 +24,23 @@ hallucinate on screenshots"**——critical 审视视角（实测沉淀）+ 可�
 
 ## 架构
 
-    src/index.ts（注册 describe_image[normal|critical] + extract_text，共 runVision 管线）
-      → cache.ts            PersistentAnswerCache：内容寻址（图片字节 SHA-256），TTL 30d，
-                             上限 500 条，原子写，0600/0700，跨会话
-      → vision-client.ts    loadImage（路径/URL/附件引用，magic bytes，10MB 上限，拒重定向）
+    src/index.ts（注册 describe_image[normal|critical，单图 image / 批量 images ≤ 8] +
+      extract_text + llm_vision_check 诊断，共 runVision 管线）
+      → cache.ts            PersistentAnswerCache：内容寻址（图片字节 SHA-256，单图 key
+                             格式锁定 v1——存量缓存跨版本命中；多图 key 用 digest 列表），
+                             TTL 30d，上限 500 条，原子写，0600/0700，跨会话
+      → vision-client.ts    loadImage（路径/URL/附件引用，magic bytes，10MB 上限，拒重定向，
+                             stat/readFile 错误一律包 "llm-vision: " 前缀）
                             → preprocess.ts（超 1568px 缩放 / 超 1.5MB 重压，macOS sips 零依赖，
-                              失败静默降级）→ callVision（双协议 chat-completions/responses，
-                              重试/退避）
-      → attach-routes.ts    /llm-vision/attach 上传路由 + /llm-vision/raw 回读（内容寻址 id）
+                              失败静默降级；HEIC/HEIF 无条件重编码 JPEG——"转出更大"保护
+                              不适用于 HEIF——无 sips 平台明确报错；runner 可注入供离线测试）
+                            → callVision（双协议 chat-completions/responses，多图 content
+                              数组，重试/退避）
+      → health.ts           runHealthCheck：apiKey 解析 + GET /models 探测（401/404/网络分类）
+                            + 可选 testCall 1×1 图端到端；报告为领域 JSON，绝不 throw
+      → attach-routes.ts    /llm-vision/attach 上传路由 + /llm-vision/raw 回读（内容寻址 id；
+                            body cap 随 maxBytes 动态放大；附件通道仅收官方 4 类媒体，
+                            HEIC/HEIF 上传明确拒绝并提示走路径）
       → client/（browser 半）发送改写为引用、会话内缩略图、设置卡（slots + settingsScope）
 
 - 工具恒返回字符串成功 / 抛错失败，图片字节永不进会话记录

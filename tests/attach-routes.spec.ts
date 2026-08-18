@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
 import { AttachmentStore } from '@deepseek-ai/dsh-attachment'
 import type { ImageAttachmentLimits, ImageAttachmentRef, SaveImageAttachment, StoredImageAttachment } from '@deepseek-ai/dsh-attachment'
 import { Context } from '@deepseek-ai/cordis'
-import { attachmentMarkdown, attachmentNote, attachmentRefById, handleAttach, registerAttachRoute, registerAttachmentRef, validateAttachPayload, type AttachError } from '../src/attach-routes.ts'
+import { attachmentMarkdown, attachmentNote, attachBodyCap, attachmentRefById, handleAttach, registerAttachRoute, registerAttachmentRef, validateAttachPayload, MAX_ATTACH_BODY_BYTES, type AttachError } from '../src/attach-routes.ts'
 import type { AttachPayload } from '../src/attach-routes.ts'
 import { PNG_BYTES } from './mock-server.ts'
 
@@ -97,6 +97,17 @@ describe('validateAttachPayload', () => {
     expect(errOf(result)?.message).toContain('image/png')
   })
 
+  it('rejects HEIC/HEIF uploads on the attachment channel with a path hint', () => {
+    // The attachment store's ImageMediaType covers only the four classic
+    // formats; HEIF-family images go through the tools' local-path input
+    // instead (preprocessing re-encodes them to JPEG).
+    const heic = validateAttachPayload({ data: PNG_BASE64, mediaType: 'image/heic' }, 10_000_000)
+    expect(errOf(heic)?.code).toBe('rejected')
+    expect(errOf(heic)?.message).toContain('HEIC/HEIF')
+    const heif = validateAttachPayload({ data: PNG_BASE64, mediaType: 'image/heif' }, 10_000_000)
+    expect(errOf(heif)?.code).toBe('rejected')
+  })
+
   it('rejects a non-empty name that is not a string', () => {
     const result = validateAttachPayload({ data: PNG_BASE64, mediaType: 'image/png', name: 42 }, 100)
     expect(errOf(result)?.code).toBe('rejected')
@@ -131,6 +142,14 @@ describe('validateAttachPayload', () => {
     const result = validateAttachPayload({ data: 'AAAA', mediaType: 'image/png' }, 10_000_000)
     expect(errOf(result)?.code).toBe('rejected')
     expect(errOf(result)?.message).toContain('do not match')
+  })
+})
+
+describe('attachBodyCap', () => {
+  it('scales with the image bound and never drops below the constant floor', () => {
+    expect(attachBodyCap(10 * 1024 * 1024)).toBe(MAX_ATTACH_BODY_BYTES)
+    expect(attachBodyCap(1)).toBe(MAX_ATTACH_BODY_BYTES)
+    expect(attachBodyCap(30 * 1024 * 1024)).toBeGreaterThan(MAX_ATTACH_BODY_BYTES)
   })
 })
 

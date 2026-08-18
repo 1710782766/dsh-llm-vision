@@ -159,6 +159,7 @@ describe('prompt contract stability', () => {
 describe('config default sync', () => {
   it('resolves every DEFAULT_* constant when only baseURL is set', () => {
     const spec = tool.resolveConfig({ baseURL: 'https://api.example.com/v1' })
+    expect(spec.provider).toBe(tool.DEFAULT_PROVIDER)
     expect(spec.model).toBe(tool.DEFAULT_VISION_MODEL)
     expect(spec.ocrModel).toBe(tool.DEFAULT_OCR_MODEL)
     expect(spec.apiKeyEnv).toBeDefined()
@@ -196,4 +197,159 @@ describe('preprocessImage', () => {
     const out = await preprocessImage(PNG_BYTES, 'image/png', 8)
     expect(out.data.length).toBeLessThanOrEqual(PNG_BYTES.length)
   })
+})
+
+describe('provider presets', () => {
+  it('fills every endpoint field from the zhipu preset', () => {
+    const spec = tool.resolveConfig({ provider: 'zhipu' })
+    expect(spec.provider).toBe('zhipu')
+    expect(spec.baseURL).toBe(tool.PROVIDER_PRESETS.zhipu.baseURL.replace(/\/+$/, ''))
+    expect(spec.model).toBe(tool.PROVIDER_PRESETS.zhipu.model)
+    expect(spec.ocrModel).toBe(tool.PROVIDER_PRESETS.zhipu.ocrModel)
+    expect(spec.apiKeyEnv).toBe('ZHIPU_API_KEY')
+  })
+
+  it('fills every endpoint field from the gemini preset', () => {
+    const spec = tool.resolveConfig({ provider: 'gemini' })
+    expect(spec.baseURL).toBe(tool.PROVIDER_PRESETS.gemini.baseURL.replace(/\/+$/, ''))
+    expect(spec.model).toBe(tool.PROVIDER_PRESETS.gemini.model)
+    expect(spec.ocrModel).toBe(tool.PROVIDER_PRESETS.gemini.ocrModel)
+    expect(spec.apiKeyEnv).toBe('GEMINI_API_KEY')
+  })
+
+  it('fills every endpoint field from the dashscope preset', () => {
+    const spec = tool.resolveConfig({ provider: 'dashscope' })
+    expect(spec.baseURL).toBe(tool.PROVIDER_PRESETS.dashscope.baseURL.replace(/\/+$/, ''))
+    expect(spec.model).toBe(tool.DEFAULT_VISION_MODEL)
+    expect(spec.ocrModel).toBe(tool.DEFAULT_OCR_MODEL)
+    expect(spec.apiKeyEnv).toBe('DASHSCOPE_API_KEY')
+  })
+
+  it('lets explicit fields override the preset', () => {
+    const spec = tool.resolveConfig({
+      provider: 'zhipu',
+      baseURL: 'https://example.com/v1/',
+      model: 'custom-vl:high',
+      ocrModel: 'custom-ocr',
+      apiKeyEnv: 'MY_KEY_ENV',
+    })
+    expect(spec.baseURL).toBe('https://example.com/v1')
+    expect(spec.model).toBe('custom-vl')
+    expect(spec.thinking).toBe('high')
+    expect(spec.ocrModel).toBe('custom-ocr')
+    expect(spec.apiKeyEnv).toBe('MY_KEY_ENV')
+  })
+
+  it('keeps the v1 behavior for an unset provider (custom)', () => {
+    const spec = tool.resolveConfig({ baseURL: 'https://api.example.com/v1' })
+    expect(spec.provider).toBe('custom')
+    expect(spec.apiKeyEnv).toBe(tool.DEFAULT_API_KEY_ENV)
+    expect(() => tool.resolveConfig({})).toThrow('llm-vision: baseURL must be an absolute http(s) URL')
+  })
+
+  it('rejects an unknown provider', () => {
+    expect(() => tool.resolveConfig({ provider: 'nope' as tool.ProviderId })).toThrow(
+      'llm-vision: provider must be one of',
+    )
+  })
+
+  it('accepts a thinking suffix on the preset model', () => {
+    const spec = tool.resolveConfig({ provider: 'zhipu', model: 'glm-4v-flash:off' })
+    expect(spec.model).toBe('glm-4v-flash')
+    expect(spec.thinking).toBe('off')
+  })
+})
+
+/** Build a minimal ISO BMFF header with the given major brand. */
+function ftypBytes(brand: string): Buffer {
+  return Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x18]), Buffer.from('ftyp'), Buffer.from(brand), Buffer.alloc(16)])
+}
+
+describe('HEIF media types', () => {
+  it('sniffs HEIC and HEIF brands from the ftyp box', () => {
+    expect(tool.sniffMimeType(ftypBytes('heic'))).toBe('image/heic')
+    expect(tool.sniffMimeType(ftypBytes('heix'))).toBe('image/heic')
+    expect(tool.sniffMimeType(ftypBytes('heim'))).toBe('image/heic')
+    expect(tool.sniffMimeType(ftypBytes('heis'))).toBe('image/heic')
+    expect(tool.sniffMimeType(ftypBytes('heif'))).toBe('image/heif')
+  })
+
+  it('rejects non-HEIF ftyp brands (avif, mif1) and truncated headers', () => {
+    expect(tool.sniffMimeType(ftypBytes('avif'))).toBeUndefined()
+    expect(tool.sniffMimeType(ftypBytes('mif1'))).toBeUndefined()
+    expect(tool.sniffMimeType(ftypBytes('heic').subarray(0, 8))).toBeUndefined()
+  })
+})
+
+describe('preprocessImage HEIF', () => {
+  /** A runner that writes a tiny JPEG to the --out path (smaller than the input). */
+  function jpegRunner(bytes: Buffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46])) {
+    return async (args: string[], _timeoutMs: number): Promise<string> => {
+      const outIndex = args.indexOf('--out')
+      await writeFile(args[outIndex + 1], bytes)
+      return ''
+    }
+  }
+
+  it('re-encodes HEIC to JPEG even when the input is small', async () => {
+    const out = await preprocessImage(ftypBytes('heic'), 'image/heic', DEFAULT_MAX_EDGE, jpegRunner())
+    expect(out.mime).toBe('image/jpeg')
+    expect(out.data[0]).toBe(0xff)
+    expect(out.data[1]).toBe(0xd8)
+  })
+
+  it('re-encodes HEIF to JPEG', async () => {
+    const out = await preprocessImage(ftypBytes('heif'), 'image/heif', DEFAULT_MAX_EDGE, jpegRunner())
+    expect(out.mime).toBe('image/jpeg')
+  })
+
+  it('fails loudly on HEIC when sips is missing (ENOENT)', async () => {
+    const noSips = async (): Promise<string> => {
+      const error = new Error('spawn sips ENOENT') as NodeJS.ErrnoException
+      error.code = 'ENOENT'
+      throw error
+    }
+    await expect(preprocessImage(ftypBytes('heic'), 'image/heic', DEFAULT_MAX_EDGE, noSips))
+      .rejects.toThrow('llm-vision: HEIC/HEIF images need the macOS sips converter')
+  })
+
+  it('silently degrades to the original bytes on non-ENOENT failures', async () => {
+    const flaky = async (): Promise<string> => { throw new Error('sips exploded') }
+    const bytes = ftypBytes('heic')
+    const out = await preprocessImage(bytes, 'image/heic', DEFAULT_MAX_EDGE, flaky)
+    expect(out.data).toBe(bytes)
+    expect(out.mime).toBe('image/heic')
+  })
+
+  it('keeps HEIC untouched when preprocessing is disabled', async () => {
+    const bytes = ftypBytes('heic')
+    const out = await preprocessImage(bytes, 'image/heic', 0, jpegRunner())
+    expect(out.data).toBe(bytes)
+    expect(out.mime).toBe('image/heic')
+  })
+
+  it.runIf(process.platform === 'darwin')(
+    'converts a real HEIC file to JPEG through the system sips',
+    async () => {
+      const { execFile } = await import('node:child_process')
+      const dir = await mkdtemp(join(tmpdir(), 'dsh-llm-vision-heic-'))
+      cleanup.push(() => rm(dir, { recursive: true, force: true }))
+      const src = join(dir, 'pixel.png')
+      const heic = join(dir, 'pixel.heic')
+      await writeFile(src, PNG_BYTES)
+      await new Promise<void>((resolve, reject) => {
+        execFile('sips', ['-s', 'format', 'heic', src, '--out', heic], (error) => {
+          if (error) reject(error)
+          else resolve()
+        })
+      })
+      const { readFile } = await import('node:fs/promises')
+      const bytes = await readFile(heic)
+      expect(tool.sniffMimeType(bytes)).toBe('image/heic')
+      const out = await preprocessImage(bytes, 'image/heic', DEFAULT_MAX_EDGE)
+      expect(out.mime).toBe('image/jpeg')
+      expect(out.data[0]).toBe(0xff)
+      expect(out.data[1]).toBe(0xd8)
+    },
+  )
 })

@@ -33,6 +33,7 @@
     "src/vision-client.ts",
     "src/prompts.ts",
     "src/preprocess.ts",
-    "src/cache.ts"
+    "src/cache.ts",
+    "src/health.ts"
   ]
 }

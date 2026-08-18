@@ -17,7 +17,7 @@ import { readFile, stat } from 'node:fs/promises'
 import type { Context } from '@deepseek-ai/cordis'
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
 import { attachmentRefById } from './attach-routes.ts'
-import { DEFAULT_MAX_BYTES, isImageMimeType, sniffMimeType, type ImageMimeType } from './media.ts'
+import { DEFAULT_MAX_BYTES, isAttachMediaType, sniffMimeType, type ImageMimeType } from './media.ts'
 import type { ApiStyle, ResolvedConfig } from './config-resolve.ts'
 
 /** One loaded image: its bytes and the sniffed media type. */
@@ -80,7 +80,7 @@ export function parseImageAttachmentRef(raw: string): ImageAttachmentRef {
   const height = record['height']
   const name = record['name']
   if (attachmentId === undefined
-    || !isImageMimeType(mediaType)
+    || !isAttachMediaType(mediaType)
     || !isPositiveSafeInteger(bytes)
     || !isPositiveSafeInteger(width)
     || !isPositiveSafeInteger(height)
@@ -127,7 +127,7 @@ function toImage(bytes: Buffer, source: string): LoadedImage {
   if (bytes.length === 0) throw new Error(`llm-vision: image is empty: ${source}`)
   const mimeType = sniffMimeType(bytes)
   if (mimeType === undefined) {
-    throw new Error(`llm-vision: unsupported image type (expected PNG, JPEG, GIF, or WebP): ${source}`)
+    throw new Error(`llm-vision: unsupported image type (expected PNG, JPEG, GIF, WebP, HEIC, or HEIF): ${source}`)
   }
   return { bytes, mimeType }
 }
@@ -180,12 +180,24 @@ export async function loadImage(ctx: Context, input: string, signal: AbortSignal
     const bytes = await readAttachment(ctx, JSON.stringify(registered), signal)
     return finishLoad(bytes, trimmed, maxBytes)
   }
-  const info = await stat(trimmed, { bigint: false })
+  let info: Awaited<ReturnType<typeof stat>>
+  try {
+    info = await stat(trimmed, { bigint: false })
+  } catch (error) {
+    // Errors here carry no llm-vision prefix by nature (ENOENT etc.); wrap so
+    // every surfaced error honors the "llm-vision: " contract.
+    throw new Error(`llm-vision: cannot read image file: ${(error as Error).message}`)
+  }
   if (!info.isFile()) throw new Error(`llm-vision: image path is not a file: ${trimmed}`)
   if (info.size > maxBytes) {
     throw new Error(`llm-vision: image is ${info.size} bytes, above the ${maxBytes}-byte bound`)
   }
-  const bytes = await readFile(trimmed, { signal })
+  let bytes: Buffer
+  try {
+    bytes = await readFile(trimmed, { signal })
+  } catch (error) {
+    throw new Error(`llm-vision: cannot read image file: ${(error as Error).message}`)
+  }
   return finishLoad(bytes, trimmed, maxBytes)
 }
 
@@ -291,10 +303,12 @@ export function extractResponsesContent(payload: unknown): string {
  * a thinking suffix, Chat Completions maps it to `thinking.type` (`off` -> `disabled`, every
  * other level -> `enabled`) and Responses forwards it as `reasoning.effort` (`off` ->
  * `none`, levels pass through); without a suffix no thinking control is sent, so the endpoint
- * keeps its own default.
+ * keeps its own default. `more` appends additional images to the same message (multi-image
+ * reads, e.g. screenshot comparisons).
  */
-export function buildVisionRequest(spec: ResolvedConfig, prompt: string, image: LoadedImage): { path: string; body: string } {
-  const dataUrl = `data:${image.mimeType};base64,${image.bytes.toString('base64')}`
+export function buildVisionRequest(spec: ResolvedConfig, prompt: string, image: LoadedImage, more: LoadedImage[] = []): { path: string; body: string } {
+  const images = [image, ...more]
+  const dataUrls = images.map(im => `data:${im.mimeType};base64,${im.bytes.toString('base64')}`)
   if (spec.apiStyle === 'responses') {
     return {
       path: `${spec.baseURL}/responses`,
@@ -306,7 +320,7 @@ export function buildVisionRequest(spec: ResolvedConfig, prompt: string, image: 
           role: 'user',
           content: [
             { type: 'input_text', text: prompt },
-            { type: 'input_image', image_url: dataUrl },
+            ...dataUrls.map(url => ({ type: 'input_image', image_url: url })),
           ],
         }],
       }),
@@ -322,7 +336,7 @@ export function buildVisionRequest(spec: ResolvedConfig, prompt: string, image: 
         role: 'user',
         content: [
           { type: 'text', text: prompt },
-          { type: 'image_url', image_url: { url: dataUrl } },
+          ...dataUrls.map(url => ({ type: 'image_url', image_url: { url } })),
         ],
       }],
     }),
@@ -382,15 +396,27 @@ export function createVisionCache(options?: { ttlMs?: number; maxEntries?: numbe
   }
 }
 
-/** The semantic identity of one vision request: endpoint fields plus the same image bytes and prompt. */
-export function semanticRequestKey(spec: ResolvedConfig, prompt: string, image: LoadedImage): string {
+/**
+ * The semantic identity of one vision request: endpoint fields plus the same image bytes and prompt.
+ * A single image keeps the v1 key layout so previously cached answers still hit; multi-image
+ * requests key on the digest list instead.
+ */
+export function semanticRequestKey(spec: ResolvedConfig, prompt: string, image: LoadedImage, more: LoadedImage[] = []): string {
   // Key by a digest of the bytes, not the base64 text itself: the full
   // encoding is ~1.33x a multi-MB image and every cached entry would pin
   // that string for the TTL, while a digest is 64 chars.
-  const digest = createHash('sha256').update(image.bytes).digest('hex')
+  if (more.length === 0) {
+    const digest = createHash('sha256').update(image.bytes).digest('hex')
+    return JSON.stringify([
+      spec.baseURL, spec.model, spec.maxOutputTokens, spec.apiStyle, spec.thinking,
+      digest, image.mimeType, prompt,
+    ])
+  }
+  const digests = [image, ...more].map(im => createHash('sha256').update(im.bytes).digest('hex'))
+  const mimes = [image, ...more].map(im => im.mimeType)
   return JSON.stringify([
     spec.baseURL, spec.model, spec.maxOutputTokens, spec.apiStyle, spec.thinking,
-    digest, image.mimeType, prompt,
+    digests, mimes, prompt,
   ])
 }
 
@@ -460,13 +486,14 @@ export async function callVision(
   signal: AbortSignal,
   cache?: AnswerCache,
   backoffFn: (ms: number) => Promise<void> = backoff,
+  more: LoadedImage[] = [],
 ): Promise<string> {
-  const key = semanticRequestKey(spec, prompt, image)
+  const key = semanticRequestKey(spec, prompt, image, more)
   if (cache !== undefined) {
     const cached = cache.get(key)
     if (cached !== undefined) return cached
   }
-  const { path, body } = buildVisionRequest(spec, prompt, image)
+  const { path, body } = buildVisionRequest(spec, prompt, image, more)
   let failedAttempt = 0
   let lastError: Error | undefined
   const budgets = attemptTimeouts(spec.timeoutMs, spec.maxRetries)
