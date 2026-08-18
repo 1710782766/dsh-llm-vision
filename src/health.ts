@@ -1,7 +1,7 @@
 /**
  * Health check for the llm-vision tools: verifies the configuration resolves,
  * an API key is obtainable, and the endpoint answers a keyed probe — plus an
- * optional end-to-end test call on a 1×1 image. The report is the domain
+ * optional end-to-end test call on a 64×64 image. The report is the domain
  * result (plain JSON, never thrown; infrastructure failures in the plumbing
  * still throw per the error contract). Keys never appear in the report.
  * @module dsh-llm-vision/health
@@ -91,7 +91,7 @@ async function probeEndpoint(
   }
 }
 
-/** One end-to-end test call on the 1×1 image through the real vision pipeline. */
+/** One end-to-end test call on the 64×64 image through the real vision pipeline. */
 async function probeTestCall(
   spec: ResolvedConfig,
   apiKey: string,
@@ -105,7 +105,7 @@ async function probeTestCall(
       { bytes: HEALTH_PNG_BYTES, mimeType: 'image/png' },
       signal,
     )
-    return { name: 'testCall', status: 'ok', detail: 'end-to-end vision call on a 1×1 image succeeded' }
+    return { name: 'testCall', status: 'ok', detail: 'end-to-end vision call on a 64×64 image succeeded' }
   } catch (error) {
     if (signal.aborted) throw error
     const message = error instanceof Error ? error.message : String(error)

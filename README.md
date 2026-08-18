@@ -13,11 +13,13 @@ Prompt engineering that makes screenshot QA trustworthy, the same reliability
 engineering (preprocessing / retries / persistent cache) — plus the DSH-native
 experience paste-bridge, live settings card, URL input, and attachment references.
 
-> **Status**: v0.2.0 on GitHub and npm. Verified end-to-end against a live
+> **Status**: v0.2.2 on GitHub and npm. Verified end-to-end against a live
 > OpenAI-compatible vision endpoint (DashScope `qwen3-vl-plus` / `qwen3.5-ocr`)
-> in the real web GUI; 216 offline tests. v0.2.0 adds free provider presets
+> in the real web GUI; 217 offline tests. v0.2.0 added free provider presets
 > (Zhipu GLM-4V-Flash, Gemini), multi-image batch reads, a `llm_vision_check`
-> diagnostic tool, and HEIC/HEIF support.
+> diagnostic tool, and HEIC/HEIF support. v0.2.2 fixes the `llm_vision_check`
+> testCall probe to a 64×64 image (the old 1×1 probe was rejected by
+> qwen3-vl-plus's minimum-size rule) — the diagnostic now passes end to end.
 
 ## Why
 

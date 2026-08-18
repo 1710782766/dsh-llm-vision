@@ -357,13 +357,13 @@ function applyImpl(ctx: Context, config: Config = {}): void {
     description:
       'Diagnose the llm-vision visual pipeline: verify the endpoint configuration, that an API key '
       + 'resolves, and that the endpoint answers an authenticated probe (GET /models) — optionally '
-      + 'with a real end-to-end vision call on a 1×1 image (testCall, spends quota). Returns a JSON '
+      + 'with a real end-to-end vision call on a 64×64 image (testCall, spends quota). Returns a JSON '
       + 'report; the API key itself never appears in it. Use only when the user asks to check the '
       + 'vision configuration or troubleshoot "cannot read images" — not for ordinary image questions.',
     parameters: {
       testCall: {
         type: 'boolean',
-        description: 'Also send one real vision call on a 1×1 image to verify the full pipeline end to end (spends a tiny amount of quota). Default false.',
+        description: 'Also send one real vision call on a 64×64 image to verify the full pipeline end to end (spends a tiny amount of quota). Default false.',
       },
     },
     output: {

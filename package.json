@@ -1,7 +1,7 @@
 {
   "name": "dsh-llm-vision",
   "description": "Model-facing describe_image + extract_text tools for the DeepSeek Harness web GUI: gives a text-only model reliable image understanding and OCR through an OpenAI-compatible vision endpoint, with critical-inspection prompts, auto-preprocessing, retries, and a persistent answer cache.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "engines": {

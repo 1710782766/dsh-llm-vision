@@ -12,10 +12,12 @@
 沉淀了让截图 QA 可信的提示词工程、可靠性工程（预处理 / 重试 / 持久缓存），
 并补齐 DSH 原生体验——粘贴桥、免重启设置卡、URL 输入、附件引用。
 
-> **状态**：v0.2.0 已上线 GitHub 与 npm。已在真实 Web GUI 中对真实 OpenAI
+> **状态**：v0.2.2 已上线 GitHub 与 npm。已在真实 Web GUI 中对真实 OpenAI
 > 兼容视觉端点完成端到端验证（DashScope `qwen3-vl-plus` / `qwen3.5-ocr`）；
-> 216 个离线测试。v0.2.0 新增：免费引擎预设（智谱 GLM-4V-Flash、Gemini）、
-> 多图批量读取、`llm_vision_check` 诊断工具、HEIC/HEIF 支持。
+> 217 个离线测试。v0.2.0 新增：免费引擎预设（智谱 GLM-4V-Flash、Gemini）、
+> 多图批量读取、`llm_vision_check` 诊断工具、HEIC/HEIF 支持。v0.2.2 修复
+> `llm_vision_check` 的 testCall 探针图（1×1 → 64×64，规避 qwen3-vl-plus
+> 最小尺寸限制），诊断现可端到端通过。
 
 ## 为什么需要它
 
