@@ -7,27 +7,44 @@ English | [中文](README.zh.md)
 [![CI](https://github.com/1710782766/dsh-llm-vision/actions/workflows/ci.yml/badge.svg)](https://github.com/1710782766/dsh-llm-vision/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-blue.svg)](package.json)
 
-**Reliable vision + OCR for text-only models on DeepSeek Harness.**
+**Give your DeepSeek Harness a pair of eyes** — reliable image understanding
+and OCR for text-only models, configured entirely in the GUI.
 
-Prompt engineering that makes screenshot QA trustworthy, the same reliability
-engineering (preprocessing / retries / persistent cache) — plus the DSH-native
-experience paste-bridge, live settings card, URL input, and attachment references.
+Paste an image and the model describes or reads it; big screenshots are
+auto-compressed, transient failures retry, identical images hit a persistent
+cache. Built-in free presets (Zhipu / Gemini / DashScope) get you running
+without touching a config file.
 
-> **Status**: v0.3.0 on GitHub and npm. Verified end-to-end against a live
-> OpenAI-compatible vision endpoint (DashScope `qwen3-vl-plus` / `qwen3.5-ocr`)
-> in the real web GUI; 227 offline tests. v0.2.0 added free provider presets
-> (Zhipu GLM-4V-Flash, Gemini), multi-image batch reads, a `llm_vision_check`
-> diagnostic tool, and HEIC/HEIF support. v0.2.2 fixed the `llm_vision_check`
-> testCall probe to a 64×64 image (the old 1×1 probe was rejected by
-> qwen3-vl-plus's minimum-size rule). v0.3.0 makes the settings card the
-> authoritative configuration surface (Settings → Plugins → llm-vision, no
-> patch files), adds the provider-preset selector to the card, and fixes the
-> preset expansion that a schema default silently pre-empted.
+> **Status**: v0.3.0 on GitHub and npm — 227 offline tests, verified
+> end-to-end in the real web GUI. v0.3.0 makes the settings card the
+> authoritative configuration surface (no patch files); v0.2.0 added free
+> provider presets, multi-image batch reads, a `llm_vision_check` diagnostic,
+> and HEIC/HEIF support.
+
+## Quick start
+
+```sh
+dsh plugin --profile web add dsh-llm-vision@0.3.0
+```
+
+1. **Install** with the command above (or see [Install](#install)).
+2. **Restart the GUI once** — plugins load at boot, so the card is not visible
+   until then. Configuration changes after install never need a restart.
+3. Open **Settings → Plugins → llm-vision** and pick a **Provider preset**:
+   `zhipu`, `gemini`, or `dashscope` fill the endpoint fields for you — free
+   routes, no payment details (see the [free presets
+   table](#free-presets-zero-cost-routes)).
+4. Paste your **API key** into the card's **API key** field and **Save** — it
+   is stored in your owner-only settings document and never shown again.
+5. **Use it** — paste / drag / drop an image into the composer and send; the
+   model now sees it. Or call the `llm_vision_check` tool for a full pipeline
+   diagnosis.
 
 ## Why
 
-Text-only models (DeepSeek V4, GLM text series, …) cannot see images. This plugin registers
-model-facing tools backed by any OpenAI-compatible vision endpoint:
+Text-only models (DeepSeek V4, GLM text series, …) cannot see images. This
+plugin registers model-facing tools backed by any OpenAI-compatible vision
+endpoint:
 
 | Tool | Purpose |
 |---|---|
@@ -41,7 +58,7 @@ Plus the DSH-native experience:
   image-bearing send into attach references the text model can resolve, and upgrades the
   references into inline thumbnails in the transcript.
 - **Live settings card** (Settings → Plugins → llm-vision): endpoint, models, prompts, bounds,
-  retries, preprocessing, and cache — no restart needed.
+  retries, preprocessing, and cache — saves apply to the very next call.
 - **Three input kinds** per call: local absolute path, http(s) URL (redirects refused), or
   attachment reference.
 - **The image never enters the session log** — only the returned text crosses into the
@@ -53,9 +70,15 @@ Plus the DSH-native experience:
 dsh plugin --profile web add dsh-llm-vision@0.3.0
 ```
 
+Then **restart the GUI once** — plugins load at boot, so the plugin and its
+settings card become visible only after the restart (configuration changes
+after that never need one).
+
 The version is pinned on purpose: pnpm 11 holds back packages published in the
 last 24 hours, so a bare `add dsh-llm-vision` (latest) would silently install
 the previous release on launch day. This line is bumped with every release.
+`--profile web` is the GUI profile of this deployment — use your own profile
+name if it differs.
 
 From a source checkout the same command accepts a tarball or local path
 (`pnpm pack` names the tarball after the current version — use that name):
@@ -75,13 +98,19 @@ Everything is configured in the GUI — the **Settings → Plugins → llm-visio
 card. No patch file, no environment exports required:
 
 1. Open **Settings → Plugins** and find the **llm-vision** card.
-2. Pick a **Provider preset** for a zero-config free route, or set
+2. Pick a **Provider preset** for a zero-config route, or set
    `baseURL` / `model` / `ocrModel` yourself (`custom`).
-3. Fill the **API key** field (a secret: it is stored in the harness's
-   owner-only settings document and never shown again), or leave it empty and
-   let `apiKeyEnv` resolve through the credential seam (`VISION_API_KEY` by
-   default).
+3. Paste the **API key** into the card's **API key** field — the simple path:
+   it is stored in the harness's owner-only settings document
+   (`~/.dsh/settings.yaml`, `0600`) and never shown again. *Advanced:* leave
+   the field empty and let `apiKeyEnv` resolve through the credential seam
+   instead (presets prefill e.g. `DASHSCOPE_API_KEY`; the default is
+   `VISION_API_KEY`) — for users who prefer environment variables.
 4. **Save** — the change reaches the very next tool call, no restart.
+
+Before configuring, the first call fails with a clear hint (`llm-vision:
+baseURL must be an absolute http(s) URL`) — that is the expected unconfigured
+state, not a broken install.
 
 The values live in the harness settings document (`~/.dsh/settings.yaml`,
 `0600`, shared across profiles) and are written by the GUI. A profile patch
@@ -93,15 +122,14 @@ falls back to the built-in defaults.
 #### Free presets (zero-cost routes)
 
 The **Provider preset** selector fills `baseURL` / `model` / `ocrModel` /
-`apiKeyEnv` for you — including two **permanently free** vision routes (facts
-verified 2026-08; free policies change, so re-check the provider docs if a
-call stops working):
+`apiKeyEnv` for you — free routes, no payment details. Free policies change,
+so re-check the provider docs if a call stops working:
 
-| Preset | Endpoint | Key |
+| Preset | Endpoint | Getting a free key |
 |---|---|---|
-| `zhipu` | Zhipu BigModel — free GLM-4V-Flash (best default in mainland China) | `ZHIPU_API_KEY` (open.bigmodel.cn, free tier, no card) |
-| `gemini` | Google Gemini — free key from Google AI Studio (aistudio.google.com, no card) | `GEMINI_API_KEY` |
-| `dashscope` | Alibaba DashScope (the default models) | `DASHSCOPE_API_KEY` |
+| `zhipu` | Zhipu BigModel — permanently free GLM-4V-Flash; the best default in mainland China | open.bigmodel.cn — register, create an API key; free tier, no card |
+| `gemini` | Google Gemini — free key from Google AI Studio (aistudio.google.com) | AI Studio → "Get API key", no card; **not reachable from mainland China without a proxy** |
+| `dashscope` | Alibaba DashScope (the default models) with free quota | Alibaba Cloud Bailian console (bailian.console.aliyun.com) — free quota; reachable from mainland China |
 
 Picking a preset prefills the endpoint fields (still editable before saving);
 explicit field values always win at call time. The free presets reuse the

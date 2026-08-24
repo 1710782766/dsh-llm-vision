@@ -7,19 +7,29 @@
 [![CI](https://github.com/1710782766/dsh-llm-vision/actions/workflows/ci.yml/badge.svg)](https://github.com/1710782766/dsh-llm-vision/actions/workflows/ci.yml)
 [![Node](<https://img.shields.io/badge/node-%3E%3D22-blue.svg>)](package.json)
 
-**给纯文本模型可靠视觉 + OCR 的 DeepSeek Harness 插件。**
+**给 DeepSeek Harness 装上一双眼睛**——让纯文本模型可靠地看懂图片与文档，配置全部在 GUI 完成。
 
-沉淀了让截图 QA 可信的提示词工程、可靠性工程（预处理 / 重试 / 持久缓存），
-并补齐 DSH 原生体验——粘贴桥、免重启设置卡、URL 输入、附件引用。
+粘贴图片即可让模型描述或阅读；大图自动压缩、瞬时失败自动重试、相同图片命中持久缓存。
+内置免费预设（智谱 / Gemini / DashScope）零配置上手，全程不碰配置文件。
 
-> **状态**：v0.3.0 已上线 GitHub 与 npm。已在真实 Web GUI 中对真实 OpenAI
-> 兼容视觉端点完成端到端验证（DashScope `qwen3-vl-plus` / `qwen3.5-ocr`）；
-> 227 个离线测试。v0.2.0 新增：免费引擎预设（智谱 GLM-4V-Flash、Gemini）、
-> 多图批量读取、`llm_vision_check` 诊断工具、HEIC/HEIF 支持。v0.2.2 修复
-> `llm_vision_check` 的 testCall 探针图（1×1 → 64×64，规避 qwen3-vl-plus
-> 最小尺寸限制）。v0.3.0 起设置卡成为权威配置入口（设置 → 插件 → llm-vision，
-> 不再需要 patch 文件），卡片新增服务商预设选择器，并修复了被 schema 默认
-> 静默抢占的预设展开。
+> **状态**：v0.3.0 已上线 GitHub 与 npm——227 个离线测试，已在真实 Web GUI 中端到端验证。
+> v0.3.0 起设置卡成为权威配置入口（不再需要 patch 文件）；v0.2.0 新增免费引擎预设、
+> 多图批量读取、`llm_vision_check` 诊断、HEIC/HEIF 支持。
+
+## 快速上手
+
+```sh
+dsh plugin --profile web add dsh-llm-vision@0.3.0
+```
+
+1. **安装**（上面命令，或见[安装](#安装)）；
+2. **重启一次 GUI**——插件在启动时加载，重启后设置卡才可见；此后改配置永不需重启；
+3. 打开**设置 → 插件 → llm-vision**，选一个**服务商预设**（`zhipu` / `gemini` / `dashscope`
+   自动填充端点字段——免费路线，无需绑卡，见[免费预设表](#免费预设零成本路线)）；
+4. 在卡片的 **API Key** 字段**粘贴你的密钥**并**保存**（写入本机仅本人可读的设置文档，
+   不再回显）；
+5. **开用**——把图片粘贴 / 拖拽进输入框发送，模型就能看懂；或调用 `llm_vision_check`
+   工具做一次全链路诊断。
 
 ## 为什么需要它
 
@@ -36,7 +46,8 @@ DSH 原生体验：
 
 - **粘贴 / 拖拽**图片到输入框发送即可：浏览器半在提交时把带图消息改写为附件引用（文本模型可解析），
   并在会话里把引用原地升级为缩略图。
-- **免重启设置卡**（设置 → 插件配置 → llm-vision）：端点、模型、提示词、上限、重试、预处理、缓存。
+- **免重启设置卡**（设置 → 插件 → llm-vision）：端点、模型、提示词、上限、重试、预处理、缓存——
+  保存即对下一次调用生效。
 - **三种输入**：本地绝对路径、http(s) URL（拒绝重定向）、附件引用。
 - **图片永不进入会话记录**——只有返回文字进入对话。
 
@@ -46,8 +57,12 @@ DSH 原生体验：
 dsh plugin --profile web add dsh-llm-vision@0.3.0
 ```
 
+然后**重启一次 GUI**——插件在启动时加载，重启后插件与设置卡才可见（此后改配置
+永不需重启）。
+
 版本号是刻意钉扎的：pnpm 11 会暂缓 24 小时内新发布的包，裸 `add dsh-llm-vision`
-（latest）在发版当天会静默装到上一版。本行随每次发版同步更新。
+（latest）在发版当天会静默装到上一版。本行随每次发版同步更新。`--profile web`
+是当前部署的 GUI profile 名——不同部署请换成自己的 profile。
 
 从源码 checkout 安装时，同一命令接受 tarball 或本地路径
 （`pnpm pack` 以当前版本命名 tarball——请使用实际产出的文件名）：
@@ -68,9 +83,14 @@ tarball 自带预构建的 `lib/`（node 半 + `lib/client.js`），安装方无
 1. 打开**设置 → 插件**，找到 **llm-vision** 卡片。
 2. 选一个**服务商预设**即可零配置走免费路线；或选 `custom` 自己填
    `baseURL` / `model` / `ocrModel`。
-3. 填 **API key**（秘密字段：写入本机仅本人可读的设置文档，GUI 不再回显）；
-   或留空，让 `apiKeyEnv` 经凭证服务解析（默认 `VISION_API_KEY`）。
+3. 在 **API Key** 字段**粘贴你的密钥**——最简单的方式：它写入本机仅本人可读的
+   设置文档（`~/.dsh/settings.yaml`，`0600`），GUI 不再回显。*高级*：留空该字段，
+   让 `apiKeyEnv` 经凭证服务解析（预设会预填如 `DASHSCOPE_API_KEY`；默认
+   `VISION_API_KEY`）——适合偏好环境变量的用户。
 4. **保存**——下一次调用立即生效，无需重启。
+
+配置前首次调用会得到清晰提示（`llm-vision: baseURL must be an absolute http(s) URL`）——
+这是预期的未配置状态，不是安装坏了。
 
 配置存于 harness 设置文档（`~/.dsh/settings.yaml`，`0600`，跨 profile 共享），
 由 GUI 写入。profile patch 层仍可提供卡片的*部署默认值*（卡片上显示为
@@ -80,14 +100,13 @@ tarball 自带预构建的 `lib/`（node 半 + `lib/client.js`），安装方无
 #### 免费预设（零成本路线）
 
 **服务商预设**选择器会自动填充 `baseURL` / `model` / `ocrModel` /
-`apiKeyEnv`——包括两条**永久免费**视觉路线（事实验证于 2026-08；免费政策
-会变，调用失效时请复查各厂商文档）：
+`apiKeyEnv`——免费路线，无需绑卡。免费政策会变，调用失效时请复查各厂商文档：
 
-| 预设 | 端点 | 密钥 |
+| 预设 | 端点 | 免费密钥获取 |
 |---|---|---|
-| `zhipu` | 智谱 BigModel——免费 GLM-4V-Flash（中国大陆最佳默认） | `ZHIPU_API_KEY`（open.bigmodel.cn，免费额度，无需绑卡） |
-| `gemini` | Google Gemini——Google AI Studio 免费 key（aistudio.google.com，免绑卡） | `GEMINI_API_KEY` |
-| `dashscope` | 阿里 DashScope（默认模型） | `DASHSCOPE_API_KEY` |
+| `zhipu` | 智谱 BigModel——永久免费 GLM-4V-Flash；中国大陆最佳默认 | open.bigmodel.cn——注册后创建 API key，免费额度，无需绑卡 |
+| `gemini` | Google Gemini——Google AI Studio 免费 key（aistudio.google.com） | AI Studio 里 "Get API key"，免绑卡；**中国大陆直连不可用（需代理）** |
+| `dashscope` | 阿里 DashScope（默认模型）带免费额度 | 阿里云百炼控制台（bailian.console.aliyun.com）——免费额度；中国大陆可直连 |
 
 选择预设会预填端点字段（保存前仍可修改）；显式字段值在调用时始终优先。
 免费预设的 OCR 复用同一视觉模型（`extract_text` 用 OCR 提示词驱动）——
@@ -175,5 +194,5 @@ pnpm watch       # tsdown --watch
 ## 许可与署名
 
 Apache-2.0。基于：deepseek-harness packages/vision/tool-describe-image
-（whitelonng/dsh-plugin-describe-image，MIT）、dsh-web-ui 插件全家桶（Apache-2.0）、
+(whitelonng/dsh-plugin-describe-image, MIT)、dsh-web-ui 插件家族（Apache-2.0）与
 llm_vision 设计（MIT）。见 [NOTICE](NOTICE) 与 [AGENTS.md](AGENTS.md)。
