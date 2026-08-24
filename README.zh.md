@@ -12,10 +12,6 @@
 粘贴图片即可让模型描述或阅读；大图自动压缩、瞬时失败自动重试、相同图片命中持久缓存。
 内置免费预设（智谱 / Gemini / DashScope）零配置上手，全程不碰配置文件。
 
-> **状态**：v0.3.0 已上线 GitHub 与 npm——227 个离线测试，已在真实 Web GUI 中端到端验证。
-> v0.3.0 起设置卡成为权威配置入口（不再需要 patch 文件）；v0.2.0 新增免费引擎预设、
-> 多图批量读取、`llm_vision_check` 诊断、HEIC/HEIF 支持。
-
 ## 快速上手
 
 ```sh
@@ -137,13 +133,6 @@ tarball 自带预构建的 `lib/`（node 半 + `lib/client.js`），安装方无
 | `renderImagePreview` | `true`                           | 附件引用原地渲染缩略图（仅影响本地显示）。                                                                                  |
 | `interceptImageSend` | `true`                           | 发送时改写带图消息为附件引用；关闭则原样放行（与其他视觉插件共用时）。                                                      |
 
-#### 从 v0.2.x 迁移
-
-v0.3.0 起设置卡成为权威配置入口。此前没有已发布的用户基数，因此不做自动
-迁移：升级后删除 `cordis.patch.yml` 里的旧 `llm-vision` 配置段，在卡片里
-重新配置一次端点与密钥（旧值如调大的 `maxBytes` 需要重新设置）。为密钥设置
-的环境变量（`VISION_API_KEY` 等）仍作为 `apiKeyEnv` 兜底继续有效。
-
 ## 可靠性工程
 
 - **自动预处理**——超过 1568px 的图片自动等比缩放、大体积重编码（JPEG q85，透明格式保留 PNG），
@@ -166,7 +155,7 @@ v0.3.0 起设置卡成为权威配置入口。此前没有已发布的用户基�
 
 ## 测试状态
 
-227 个离线单元/集成测试（vitest、mock HTTP 服务、tmp 目录缓存）+ 严格 typecheck +
+全部离线测试（vitest、mock HTTP 服务、tmp 目录缓存）+ 严格 typecheck +
 每次推送的 CI。并已在**真实 DSH Web GUI 中端到端验证**：`describe_image` 真实读图
 （DashScope `qwen3-vl-plus`）、`extract_text` 真实 OCR 转录（`qwen3.5-ocr`）、
 attach 上传/回读路由经真实 web 服务器工作、设置卡在插件配置页正常渲染并可
@@ -186,7 +175,7 @@ attach 上传/回读路由经真实 web 服务器工作、设置卡在插件配�
 
 ```bash
 pnpm typecheck   # tsc -b + vitest 程序
-pnpm test        # vitest run（227 个测试，全部离线）
+pnpm test        # vitest run（全部离线）
 pnpm build       # tsc -b && tsdown → lib/ + lib/client.js
 pnpm watch       # tsdown --watch
 ```

@@ -15,12 +15,6 @@ auto-compressed, transient failures retry, identical images hit a persistent
 cache. Built-in free presets (Zhipu / Gemini / DashScope) get you running
 without touching a config file.
 
-> **Status**: v0.3.0 on GitHub and npm — 227 offline tests, verified
-> end-to-end in the real web GUI. v0.3.0 makes the settings card the
-> authoritative configuration surface (no patch files); v0.2.0 added free
-> provider presets, multi-image batch reads, a `llm_vision_check` diagnostic,
-> and HEIC/HEIF support.
-
 ## Quick start
 
 ```sh
@@ -161,16 +155,6 @@ tiers are rate-limited, so they suit interactive use better than batch runs.
 | `renderImagePreview` | `true` | Upgrade attach references into inline thumbnails (display only). |
 | `interceptImageSend` | `true` | Rewrite image-bearing sends into attach references at submit; turn off to hand raw image blocks to other vision plugins. |
 
-#### Migrating from v0.2.x
-
-v0.3.0 makes the settings card the authoritative configuration surface.
-There was no released user base before this change, so there is no automatic
-migration: after upgrading, remove the old `llm-vision` config block from
-`cordis.patch.yml` and re-enter your endpoint and key in the card once
-(any values you had there — e.g. a raised `maxBytes` — must be set again in
-the GUI). Environment variables set for the key (`VISION_API_KEY` etc.) keep
-working as the `apiKeyEnv` fallback.
-
 ## Reliability engineering
 
 - **Auto-preprocessing** — images over 1568px are scaled, oversize files re-encoded (JPEG q85,
@@ -202,13 +186,13 @@ working as the `apiKeyEnv` fallback.
 
 ## Testing status
 
-227 offline unit/integration tests (vitest, mock HTTP server, tmp-dir cache)
-plus a strict typecheck and CI on every push. Verified **end-to-end in the
-real DSH web GUI** against a live OpenAI-compatible vision endpoint:
-`describe_image` reads a real image (DashScope `qwen3-vl-plus`), `extract_text`
-OCR returns real transcription (`qwen3.5-ocr`), the attach upload/readback
-routes work through the live web server, and the settings card renders and
-saves in the plugin-configuration page — see [Configure](#configure).
+A fully offline test suite (vitest, mock HTTP server, tmp-dir cache), a
+strict typecheck, and CI on every push. Verified **end-to-end in the real DSH
+web GUI** against a live OpenAI-compatible vision endpoint: `describe_image`
+reads a real image (DashScope `qwen3-vl-plus`), `extract_text` OCR returns
+real transcription (`qwen3.5-ocr`), the attach upload/readback routes work
+through the live web server, and the settings card renders and saves in the
+plugin-configuration page — see [Configure](#configure).
 
 ## Known limitations
 
@@ -226,7 +210,7 @@ saves in the plugin-configuration page — see [Configure](#configure).
 
 ```bash
 pnpm typecheck   # tsc -b + vitest program
-pnpm test        # vitest run (227 tests, fully offline)
+pnpm test        # vitest run (fully offline)
 pnpm build       # tsc -b && tsdown → lib/ + lib/client.js
 pnpm watch       # tsdown --watch
 ```
