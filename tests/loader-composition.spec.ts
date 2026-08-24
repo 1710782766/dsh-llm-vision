@@ -11,6 +11,8 @@ import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
 import { CallId } from '@deepseek-ai/dsh-llm'
+import { SettingsProvider } from '@deepseek-ai/dsh-settings'
+import type { SettingsNamespace } from '@deepseek-ai/dsh-settings'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import ToolRuntime from '@deepseek-ai/dsh-tools'
@@ -31,12 +33,33 @@ afterEach(async () => {
   await Promise.all(cleanup.splice(0).map(close => close()))
 })
 
+/** The smallest real provider: one in-memory document, always writable (mirrors tests/settings.spec.ts). */
+class MemorySettings extends SettingsProvider {
+  doc: Record<string, unknown> = {}
+
+  get writable(): boolean {
+    return true
+  }
+
+  protected load(): Promise<Record<string, unknown>> {
+    return Promise.resolve(structuredClone(this.doc))
+  }
+
+  protected persist(ns: SettingsNamespace, section: Record<string, unknown>): Promise<void> {
+    this.doc = { ...this.doc, [ns]: structuredClone(section) }
+    return Promise.resolve()
+  }
+}
+
 /**
  * Boot a cordis.yml carrying the given describe-image config block.
  * @param configLines - YAML lines nested under the tool's `config:` key.
+ * @param withSettings - also mount an in-memory settings provider ahead of
+ * the tool, so a mount carrying NO config can be configured through the
+ * settings section — the GUI write path.
  * @returns the booted context.
  */
-async function boot(configLines: readonly string[]): Promise<Context> {
+async function boot(configLines: readonly string[], withSettings = false): Promise<Context> {
   root = await mkdtemp(join(tmpdir(), 'dsh-llm-vision-loader-'))
   const configPath = join(root, 'cordis.yml')
   // Isolate the persistent cache inside this boot's tmp root: e2e calls here
@@ -47,6 +70,7 @@ async function boot(configLines: readonly string[]): Promise<Context> {
     "- name: '@deepseek-ai/dsh-agent'",
     "- name: '@deepseek-ai/dsh-system-prompt'",
     "- name: '@deepseek-ai/dsh-tools'",
+    ...withSettings ? ["- name: '@deepseek-ai/dsh-settings-file'"] : [],
     "- name: 'dsh-llm-vision'",
     ...configLines.length > 0 ? ['  config:', ...configLines, cacheLine] : [],
     '',
@@ -62,6 +86,7 @@ async function boot(configLines: readonly string[]): Promise<Context> {
     ['@deepseek-ai/dsh-agent', AgentRegistry],
     ['@deepseek-ai/dsh-system-prompt', SystemPrompt],
     ['@deepseek-ai/dsh-tools', ToolRuntime],
+    ...withSettings ? [['@deepseek-ai/dsh-settings-file', MemorySettings] as const] : [],
     ['dsh-llm-vision', DescribeImage],
   ])
   ctx.loader.internal = {
@@ -172,5 +197,29 @@ describe('describe-image real Loader composition through cordis.yml', () => {
     expect(result.isError).toBe(true)
     expect(result.content.filter(block => block.type === 'text').map(block => block.text).join(''))
       .toContain('llm-vision: baseURL must be an absolute http(s) URL')
+  }, 30_000)
+
+  it('serves the endpoint from the settings section when the mount carries no config', async () => {
+    const server = await startMockServer((_request, res) => { jsonReply(res, 200, chatReply('From settings.')) })
+    cleanup.push(server.close)
+    const ctx = await boot([], true)
+    const schema = ctx.tools.schemas().find(s => s.name === 'describe_image')
+    expect(schema).toBeDefined()
+
+    // The GUI write path: a committed settings-section update, no mount
+    // config anywhere — the migration target for this plugin.
+    await ctx.settings.update(DescribeImage.LLM_VISION_SETTINGS_NAMESPACE, {
+      baseURL: server.url,
+      model: 'loader-settings-model',
+      apiKey: 'sk-from-settings',
+      cacheDir: join(root!, 'cache'),
+    })
+
+    const path = await tempPng()
+    const result = await callDescribe(ctx, path)
+    expect(result.isError).toBe(false)
+    if (result.isError) throw new Error('expected describe_image success')
+    expect(result.value).toMatchObject({ text: 'From settings.', model: 'loader-settings-model' })
+    expect(server.request(0).authorization).toBe('Bearer sk-from-settings')
   }, 30_000)
 })

@@ -12,12 +12,14 @@
 沉淀了让截图 QA 可信的提示词工程、可靠性工程（预处理 / 重试 / 持久缓存），
 并补齐 DSH 原生体验——粘贴桥、免重启设置卡、URL 输入、附件引用。
 
-> **状态**：v0.2.2 已上线 GitHub 与 npm。已在真实 Web GUI 中对真实 OpenAI
+> **状态**：v0.3.0 已上线 GitHub 与 npm。已在真实 Web GUI 中对真实 OpenAI
 > 兼容视觉端点完成端到端验证（DashScope `qwen3-vl-plus` / `qwen3.5-ocr`）；
-> 217 个离线测试。v0.2.0 新增：免费引擎预设（智谱 GLM-4V-Flash、Gemini）、
+> 227 个离线测试。v0.2.0 新增：免费引擎预设（智谱 GLM-4V-Flash、Gemini）、
 > 多图批量读取、`llm_vision_check` 诊断工具、HEIC/HEIF 支持。v0.2.2 修复
 > `llm_vision_check` 的 testCall 探针图（1×1 → 64×64，规避 qwen3-vl-plus
-> 最小尺寸限制），诊断现可端到端通过。
+> 最小尺寸限制）。v0.3.0 起设置卡成为权威配置入口（设置 → 插件 → llm-vision，
+> 不再需要 patch 文件），卡片新增服务商预设选择器，并修复了被 schema 默认
+> 静默抢占的预设展开。
 
 ## 为什么需要它
 
@@ -41,7 +43,7 @@ DSH 原生体验：
 ## 安装
 
 ```sh
-dsh plugin --profile web add dsh-llm-vision@0.2.2
+dsh plugin --profile web add dsh-llm-vision@0.3.0
 ```
 
 版本号是刻意钉扎的：pnpm 11 会暂缓 24 小时内新发布的包，裸 `add dsh-llm-vision`
@@ -60,78 +62,44 @@ tarball 自带预构建的 `lib/`（node 半 + `lib/client.js`），安装方无
 
 ### 配置
 
-官方 Web GUI 的「插件配置」页只暴露白名单内的 settings 命名空间——第三方
-命名空间被刻意排除（官方注释将"插件声明暴露"列为延期工作）。因此设置卡会
-显示「命名空间未暴露」说明；请改在 profile patch 层配置，密钥走环境变量
-引用（patch 文件绝不写明文密钥）：
+一切配置都在 GUI 里完成——**设置 → 插件 → llm-vision** 卡片。不需要 patch
+文件，也不需要导出环境变量：
 
-```yaml
-# ~/.dsh/profiles/web/cordis.patch.yml
-- id: llm-vision
-  name: 'dsh-llm-vision'
-  config:
-    baseURL: https://dashscope.aliyuncs.com/compatible-mode/v1
-    model: qwen3-vl-plus
-    ocrModel: qwen3.5-ocr
-    apiKey: !!js process.env.VISION_API_KEY
-```
+1. 打开**设置 → 插件**，找到 **llm-vision** 卡片。
+2. 选一个**服务商预设**即可零配置走免费路线；或选 `custom` 自己填
+   `baseURL` / `model` / `ocrModel`。
+3. 填 **API key**（秘密字段：写入本机仅本人可读的设置文档，GUI 不再回显）；
+   或留空，让 `apiKeyEnv` 经凭证服务解析（默认 `VISION_API_KEY`）。
+4. **保存**——下一次调用立即生效，无需重启。
 
-```sh
-# ~/.dsh/.env（或启动 dsh 前 export）
-VISION_API_KEY=sk-...
-```
-
-然后重启 GUI。设置 → 插件配置中卡片可见，并会说明这一限制而不是消失。
+配置存于 harness 设置文档（`~/.dsh/settings.yaml`，`0600`，跨 profile 共享），
+由 GUI 写入。profile patch 层仍可提供卡片的*部署默认值*（卡片上显示为
+「继承」），但卡片保存的值始终优先——用户只需要 GUI 这一个配置入口。
+没有 settings 提供者的部署回退到内置默认。
 
 #### 免费预设（零成本路线）
 
-不自己写 `baseURL` / `model` / `ocrModel`，一个 `provider` 开关即可从内置预设
-填充——包括两条**永久免费**视觉路线（事实验证于 2026-08；免费政策会变，
-调用失效时请复查各厂商文档）：
+**服务商预设**选择器会自动填充 `baseURL` / `model` / `ocrModel` /
+`apiKeyEnv`——包括两条**永久免费**视觉路线（事实验证于 2026-08；免费政策
+会变，调用失效时请复查各厂商文档）：
 
-```yaml
-# 智谱 BigModel——免费 GLM-4V-Flash（中国大陆最佳默认）
-- id: llm-vision
-  name: 'dsh-llm-vision'
-  config:
-    provider: zhipu
-    apiKey: !!js process.env.ZHIPU_API_KEY   # 或设 apiKeyEnv: ZHIPU_API_KEY
-```
+| 预设 | 端点 | 密钥 |
+|---|---|---|
+| `zhipu` | 智谱 BigModel——免费 GLM-4V-Flash（中国大陆最佳默认） | `ZHIPU_API_KEY`（open.bigmodel.cn，免费额度，无需绑卡） |
+| `gemini` | Google Gemini——Google AI Studio 免费 key（aistudio.google.com，免绑卡） | `GEMINI_API_KEY` |
+| `dashscope` | 阿里 DashScope（默认模型） | `DASHSCOPE_API_KEY` |
 
-```sh
-# ~/.dsh/.env
-ZHIPU_API_KEY=你的智谱密钥   # https://open.bigmodel.cn——免费额度，无需绑卡
-```
-
-```yaml
-# Google Gemini——Google AI Studio 免费 key（aistudio.google.com，免绑卡）
-- id: llm-vision
-  name: 'dsh-llm-vision'
-  config:
-    provider: gemini
-    apiKey: !!js process.env.GEMINI_API_KEY
-```
-
-```yaml
-# 阿里 DashScope（默认模型，作为预设）
-- id: llm-vision
-  name: 'dsh-llm-vision'
-  config:
-    provider: dashscope
-    apiKey: !!js process.env.DASHSCOPE_API_KEY
-```
-
-显式 `baseURL` / `model` / `ocrModel` / `apiKeyEnv` 始终覆盖预设。免费预设的
-OCR 复用同一视觉模型（`extract_text` 用 OCR 提示词驱动）——免费层有限速，
-更适合交互使用而非批量跑。
+选择预设会预填端点字段（保存前仍可修改）；显式字段值在调用时始终优先。
+免费预设的 OCR 复用同一视觉模型（`extract_text` 用 OCR 提示词驱动）——
+免费层有限速，更适合交互使用而非批量跑。
 
 | 键                     | 默认                               | 含义                                                                                                                        |
 | ---------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `provider`           | `custom`                         | 端点预设：`custom`（全部字段显式）、`dashscope`、`zhipu`（免费 GLM-4V-Flash）、`gemini`（免费 key）。显式字段优先。 |
 | `baseURL`            | —（`custom` 必填）              | OpenAI 兼容根地址；按`apiStyle` 追加 /chat/completions 或 /responses。                                                    |
-| `model`              | `qwen3-vl-plus`                  | `describe_image` 使用的视觉模型；可带思考后缀 `:off/:low/:medium/:high`。                                               |
-| `ocrModel`           | `qwen3.5-ocr`                    | `extract_text` 使用的 OCR 模型；同样支持后缀。                                                                            |
-| `apiKey`             | —                                 | 内联密钥；建议用`apiKeyEnv`。schema 标记为 secret。                                                                       |
+| `model`              | 预设，否则 `qwen3-vl-plus`       | `describe_image` 使用的视觉模型；可带思考后缀 `:off/:low/:medium/:high`。                                               |
+| `ocrModel`           | 预设，否则 `qwen3.5-ocr`         | `extract_text` 使用的 OCR 模型；同样支持后缀。                                                                            |
+| `apiKey`             | —                                 | 内联密钥，写入设置文档（secret：GUI 永不回显）。                                                                            |
 | `apiKeyEnv`          | `VISION_API_KEY`                 | 凭证引用（环境变量名），经凭证服务解析；空字符串禁用。                                                                      |
 | `criticalPrompt`     | 内置                               | `describe_image` critical 视角在模型未传 prompt 时使用。                                                                  |
 | `normalPrompt`       | 内置                               | `describe_image` normal 视角在模型未传 prompt 时使用。                                                                    |
@@ -149,6 +117,13 @@ OCR 复用同一视觉模型（`extract_text` 用 OCR 提示词驱动）——�
 | `cacheMaxEntries`    | `500`                            | 缓存条数上限，超限淘汰最旧。                                                                                                |
 | `renderImagePreview` | `true`                           | 附件引用原地渲染缩略图（仅影响本地显示）。                                                                                  |
 | `interceptImageSend` | `true`                           | 发送时改写带图消息为附件引用；关闭则原样放行（与其他视觉插件共用时）。                                                      |
+
+#### 从 v0.2.x 迁移
+
+v0.3.0 起设置卡成为权威配置入口。此前没有已发布的用户基数，因此不做自动
+迁移：升级后删除 `cordis.patch.yml` 里的旧 `llm-vision` 配置段，在卡片里
+重新配置一次端点与密钥（旧值如调大的 `maxBytes` 需要重新设置）。为密钥设置
+的环境变量（`VISION_API_KEY` 等）仍作为 `apiKeyEnv` 兜底继续有效。
 
 ## 可靠性工程
 
@@ -172,12 +147,11 @@ OCR 复用同一视觉模型（`extract_text` 用 OCR 提示词驱动）——�
 
 ## 测试状态
 
-216 个离线单元/集成测试（vitest、mock HTTP 服务、tmp 目录缓存）+ 严格 typecheck +
+227 个离线单元/集成测试（vitest、mock HTTP 服务、tmp 目录缓存）+ 严格 typecheck +
 每次推送的 CI。并已在**真实 DSH Web GUI 中端到端验证**：`describe_image` 真实读图
 （DashScope `qwen3-vl-plus`）、`extract_text` 真实 OCR 转录（`qwen3.5-ocr`）、
-attach 上传/回读路由经真实 web 服务器工作、设置卡在插件配置页正常渲染。
-已知体验缺口：卡片在 GUI 中无法编辑取值（官方 settings 白名单），配置走
-patch 层——见[配置](#配置)。
+attach 上传/回读路由经真实 web 服务器工作、设置卡在插件配置页正常渲染并可
+保存生效——见[配置](#配置)。
 
 ## 已知限制
 
@@ -193,7 +167,7 @@ patch 层——见[配置](#配置)。
 
 ```bash
 pnpm typecheck   # tsc -b + vitest 程序
-pnpm test        # vitest run（216 个测试，全部离线）
+pnpm test        # vitest run（227 个测试，全部离线）
 pnpm build       # tsc -b && tsdown → lib/ + lib/client.js
 pnpm watch       # tsdown --watch
 ```

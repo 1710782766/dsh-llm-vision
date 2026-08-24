@@ -17,6 +17,24 @@ import { DEFAULT_MAX_BYTES } from './media.ts'
 import { DEFAULT_MAX_EDGE } from './preprocess.ts'
 import { DEFAULT_MAX_ENTRIES, DEFAULT_TTL_DAYS } from './cache.ts'
 import { DEFAULT_CRITICAL_DESCRIBE_PROMPT, DEFAULT_NORMAL_DESCRIBE_PROMPT, DEFAULT_OCR_PROMPT } from './prompts.ts'
+import {
+  DEFAULT_OCR_MODEL,
+  DEFAULT_PROVIDER,
+  DEFAULT_VISION_MODEL,
+  PROVIDER_IDS,
+  PROVIDER_PRESETS,
+  type ProviderId,
+  type ProviderPreset,
+} from './presets.ts'
+
+export {
+  DEFAULT_OCR_MODEL,
+  DEFAULT_PROVIDER,
+  DEFAULT_VISION_MODEL,
+  PROVIDER_IDS,
+  PROVIDER_PRESETS,
+} from './presets.ts'
+export type { ProviderId, ProviderPreset } from './presets.ts'
 
 /** Environment-variable name the API key resolves through when no inline key is configured. */
 export const DEFAULT_API_KEY_ENV = 'VISION_API_KEY'
@@ -43,55 +61,6 @@ export const DEFAULT_INTERCEPT_IMAGE_SEND = true
 export const DEFAULT_COMPRESS_ENABLED = true
 /** Whether successful answers are stored in the persistent cache. */
 export const DEFAULT_CACHE_ENABLED = true
-
-/** The default vision model (llm_vision parity: qwen3-vl-plus). */
-export const DEFAULT_VISION_MODEL = 'qwen3-vl-plus'
-/** The default OCR model (llm_vision parity: qwen3.5-ocr). */
-export const DEFAULT_OCR_MODEL = 'qwen3.5-ocr'
-
-/** The `provider` switch values: 'custom' means every endpoint field is explicit. */
-export const PROVIDER_IDS = ['custom', 'dashscope', 'zhipu', 'gemini'] as const
-export type ProviderId = typeof PROVIDER_IDS[number]
-/** The provider used when the configuration names none. */
-export const DEFAULT_PROVIDER: ProviderId = 'custom'
-
-/** One built-in endpoint preset: a provider switch fills baseURL / model / ocrModel / apiKeyEnv. */
-export interface ProviderPreset {
-  /** Root of the OpenAI-compatible endpoint. */
-  baseURL: string
-  /** Vision model id for describe_image. */
-  model: string
-  /** OCR model id for extract_text; free presets reuse the vision model (prompt-driven OCR). */
-  ocrModel: string
-  /** Environment-variable name this provider's key is conventionally stored under. */
-  apiKeyEnv: string
-}
-
-/**
- * The shipped provider presets. Free-tier facts verified 2026-08 against the
- * community provider registry and the Google AI docs; policies change, so the
- * model ids live here — one edit re-targets every preset user.
- */
-export const PROVIDER_PRESETS: Record<Exclude<ProviderId, 'custom'>, ProviderPreset> = {
-  dashscope: {
-    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    model: DEFAULT_VISION_MODEL,
-    ocrModel: DEFAULT_OCR_MODEL,
-    apiKeyEnv: 'DASHSCOPE_API_KEY',
-  },
-  zhipu: {
-    baseURL: 'https://open.bigmodel.cn/api/paas/v4',
-    model: 'glm-4.6v-flash',
-    ocrModel: 'glm-4.6v-flash',
-    apiKeyEnv: 'ZHIPU_API_KEY',
-  },
-  gemini: {
-    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-    model: 'gemini-3.7-flash',
-    ocrModel: 'gemini-3.7-flash',
-    apiKeyEnv: 'GEMINI_API_KEY',
-  },
-}
 
 /**
  * Split a model id into the id the endpoint receives and its thinking-level suffix. A trailing
@@ -176,10 +145,14 @@ export interface Config {
 export const Config: z<Config> = z.object({
   provider: z.union(PROVIDER_IDS).default(DEFAULT_PROVIDER),
   baseURL: z.string(),
-  model: z.string().default(DEFAULT_VISION_MODEL),
-  ocrModel: z.string().default(DEFAULT_OCR_MODEL),
+  // No schema defaults on the endpoint facts below: a schema default would
+  // pre-empt the provider-preset expansion in resolveConfig (a stored model
+  // always wins over the preset), so the preset switch could never retarget
+  // model / ocrModel / apiKeyEnv. resolveConfig owns every fallback.
+  model: z.string(),
+  ocrModel: z.string(),
   apiKey: z.string().role('secret'),
-  apiKeyEnv: z.string().role('credential-ref').default(DEFAULT_API_KEY_ENV),
+  apiKeyEnv: z.string().role('credential-ref'),
   criticalPrompt: z.string().default(DEFAULT_CRITICAL_DESCRIBE_PROMPT),
   normalPrompt: z.string().default(DEFAULT_NORMAL_DESCRIBE_PROMPT),
   ocrPrompt: z.string().default(DEFAULT_OCR_PROMPT),

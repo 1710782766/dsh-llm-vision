@@ -46,6 +46,7 @@ async function boot(
   doc: Record<string, unknown> = {},
   handler: (request: RecordedRequest, response: ServerResponse) => void
     = (_request, res) => { jsonReply(res, 200, chatReply('ok')) },
+  entry?: (server: MockServer) => Record<string, unknown>,
 ): Promise<{ ctx: Context; server: MockServer }> {
   const server = await startMockServer(handler)
   cleanup.push(server.close)
@@ -57,7 +58,10 @@ async function boot(
   await ctx.plugin(FakeWebServer)
   await ctx.plugin(SystemPrompt)
   await ctx.plugin(ToolRuntime)
-  await ctx.plugin(tool, { baseURL: server.url, model: 'entry-model', apiKey: 'sk-entry', cacheDir })
+  const effectiveEntry = entry !== undefined
+    ? { baseURL: server.url, cacheDir, ...entry(server) }
+    : { baseURL: server.url, model: 'entry-model', apiKey: 'sk-entry', cacheDir }
+  await ctx.plugin(tool, effectiveEntry)
   return { ctx, server }
 }
 
@@ -149,6 +153,35 @@ describe('describe-image settings section', () => {
 
     await expect(ctx.settings.update(tool.LLM_VISION_SETTINGS_NAMESPACE, { baseURL: 'ftp://example.com' }))
       .rejects.toThrow(/llm-vision: baseURL must be an absolute http\(s\) URL/)
+  })
+
+  it('serves the llm-vision namespace to configuration surfaces', async () => {
+    const { ctx } = await boot()
+
+    const rows = ctx.settings.describe()
+    const row = rows.find(candidate => String(candidate.ns) === String(tool.LLM_VISION_SETTINGS_NAMESPACE))
+    // The Plugins tab pairs served namespaces with card keys, so the
+    // namespace must be visible to describe() — the data face the GUI reads.
+    expect(row).toBeDefined()
+    // The card edits the full schema: the provider switch must be part of it.
+    expect(JSON.stringify(row?.schema)).toContain('"provider"')
+  })
+
+  it('expands a committed provider preset into the next call when no model is stored', async () => {
+    // No model anywhere (neither the entry nor the stored section): the
+    // preset must supply it — a schema default on model would pre-empt the
+    // preset and this regression catches that.
+    const cacheDir = await mkdtemp(join(tmpdir(), 'dsh-llm-vision-settings-cache-'))
+    cleanup.push(() => rm(cacheDir, { recursive: true, force: true }))
+    const { ctx, server } = await boot({}, undefined, () => ({ model: undefined, apiKey: 'sk-entry', cacheDir }))
+
+    await ctx.settings.update(tool.LLM_VISION_SETTINGS_NAMESPACE, { provider: 'zhipu' })
+
+    const path = await tempPng()
+    const result = await callDescribe(ctx, path)
+    expect(result.isError).toBe(false)
+    if (result.isError) throw new Error('expected describe_image success')
+    expect((server.request(0).body as { model?: unknown }).model).toBe('glm-4.6v-flash')
   })
 
   it('keeps the composition entry authoritative while the settings service is absent', async () => {

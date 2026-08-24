@@ -6,9 +6,11 @@
  * image to analyze without the shell's vision pipeline. The shell renders
  * user messages as plain text, so a sent reference is then upgraded in place
  * into an inline thumbnail (installConversationImagePreview) unless the
- * deployment turns previews off. The settings card is rendered by the web
- * GUI's built-in plugin config page from the host-side `describe-image`
- * section.
+ * deployment turns previews off. The settings card registers into the
+ * `settings.plugin.item` slot of the web GUI's plugin config page, keyed by
+ * the `llm-vision` settings namespace the host half serves — the configurable
+ * tab dispatches it by that key, so its edits land in the same namespace the
+ * tools read.
  *
  * Failure policy: every DOM/runtime wiring failure is logged, never thrown —
  * the web shell fails the whole boot when a plugin apply throws.
@@ -34,12 +36,12 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     /**
      * The settings card seat in the web GUI's plugin configuration page —
-     * the official `settings.plugin.item` slot (the former dsh-web-ui
-     * `web-ui.plugin.item` group seat is not rendered by the official
-     * shell). Spelled here with the same shape so this package can register
-     * without depending on the sibling UI package.
+     * the official `settings.plugin.item` slot, keyed by the `llm-vision`
+     * settings namespace this plugin's host half serves. Spelled here with
+     * the same shape so this package can register without depending on the
+     * sibling UI package.
      */
-    'settings.plugin.item': { kind: 'list'; scope: 'root'; owner: SettingsPluginItemOwnerProps }
+    'settings.plugin.item': { kind: 'keyed'; scope: 'root'; owner: SettingsPluginItemOwnerProps }
   }
 }
 
@@ -62,6 +64,15 @@ declare module '@deepseek-ai/cordis' {
 
 /** Locale namespace of the browser half. */
 export const NS = 'llm-vision' as const
+
+/**
+ * The keyed-slot key of the settings card, and the settings namespace it
+ * edits. The configurable-plugins tab dispatches `settings.plugin.item`
+ * entries by `key` and pairs them with the served namespaces, so this value
+ * MUST stay identical to `LLM_VISION_SETTINGS_NAMESPACE` (host half) — the
+ * spec pins the two together.
+ */
+export const SETTINGS_CARD_KEY = 'llm-vision' as const
 
 /** Required services: slots for the settings card, conversation for the send hook, settings scope and locale for the card copy. */
 export const inject = ['slots', 'conversation', 'settingsScope', 'locale']
@@ -114,8 +125,10 @@ export function apply(ctx: ClientContext): void {
       }
     }, 'dsh-tool-llm-vision: conversation image preview')
 
-    // The settings card: bound to the describe-image namespace through the
-    // family bridge when the official scope does not expose it.
+    // The settings card: bound to the `llm-vision` namespace through the
+    // official settings scope (the host half serves it via the settings
+    // section); the optional dsh-web-ui bridge remains for deployments that
+    // install that family's settings plugin instead.
     ctx.inject(['settingsScope'], (settingsCtx: ClientContext) => {
       const binder = settingsCtx.get('webUiSettings') ?? settingsCtx.settingsScope
       const settingsScope = binder.bind<DescribeImageSettings>({ namespace: NS })
@@ -127,8 +140,11 @@ export function apply(ctx: ClientContext): void {
       slots.inject('settings.plugin.item', () => {
         const unregister = slots.register({
           name: 'settings.plugin.item',
-          id: 'llm-vision',
-          order: 115,
+          // Keyed slot: the configurable-plugins tab dispatches cards by the
+          // settings namespace they edit (tab-store pairs `key` with the
+          // served namespaces), so the key MUST equal the namespace — an `id`
+          // alone is never dispatched and the card silently never renders.
+          key: SETTINGS_CARD_KEY,
           locale: NS,
           inject: () => settingsCard.inject(),
         }, DescribeImageSettingsCard)

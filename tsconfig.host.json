@@ -30,6 +30,7 @@
     "src/media.ts",
     "src/attach-routes.ts",
     "src/config-resolve.ts",
+    "src/presets.ts",
     "src/vision-client.ts",
     "src/prompts.ts",
     "src/preprocess.ts",

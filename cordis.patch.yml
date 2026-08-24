@@ -4,7 +4,7 @@
 #
 # Install (published to npm; the version is pinned because pnpm 11 holds back
 # releases younger than 24h — bump this line with every release):
-#   dsh plugin --profile web add dsh-llm-vision@0.2.2
+#   dsh plugin --profile web add dsh-llm-vision@0.3.0
 # From a source checkout (tarball name follows the current version):
 #   pnpm install && pnpm build && pnpm pack
 #   dsh plugin --profile web add ./dsh-llm-vision-<version>.tgz
@@ -14,8 +14,13 @@
 # the /llm-vision/attach upload route, and the "llm-vision" settings section;
 # the browser half (declared by dsh.client, served from lib/client.js)
 # rewrites image-bearing sends into attach references at submit time and
-# renders inline thumbnails. The settings card is rendered by the web GUI's
-# built-in plugin config page from the llm-vision settings section.
+# renders inline thumbnails.
+#
+# CONFIGURATION LIVES IN THE GUI: the settings card (Settings -> Plugins ->
+# llm-vision) is the authoritative configuration surface — endpoint, models,
+# API key, and every bound, saved into the harness settings document and
+# effective on the next call. Do NOT add a `config:` block here; a patch-layer
+# config would only act as the card's "Inherit" defaults and is unnecessary.
 - insert:
     - id: llm-vision
       name: 'dsh-llm-vision'

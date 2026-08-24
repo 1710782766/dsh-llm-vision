@@ -13,13 +13,16 @@ Prompt engineering that makes screenshot QA trustworthy, the same reliability
 engineering (preprocessing / retries / persistent cache) — plus the DSH-native
 experience paste-bridge, live settings card, URL input, and attachment references.
 
-> **Status**: v0.2.2 on GitHub and npm. Verified end-to-end against a live
+> **Status**: v0.3.0 on GitHub and npm. Verified end-to-end against a live
 > OpenAI-compatible vision endpoint (DashScope `qwen3-vl-plus` / `qwen3.5-ocr`)
-> in the real web GUI; 217 offline tests. v0.2.0 added free provider presets
+> in the real web GUI; 227 offline tests. v0.2.0 added free provider presets
 > (Zhipu GLM-4V-Flash, Gemini), multi-image batch reads, a `llm_vision_check`
-> diagnostic tool, and HEIC/HEIF support. v0.2.2 fixes the `llm_vision_check`
+> diagnostic tool, and HEIC/HEIF support. v0.2.2 fixed the `llm_vision_check`
 > testCall probe to a 64×64 image (the old 1×1 probe was rejected by
-> qwen3-vl-plus's minimum-size rule) — the diagnostic now passes end to end.
+> qwen3-vl-plus's minimum-size rule). v0.3.0 makes the settings card the
+> authoritative configuration surface (Settings → Plugins → llm-vision, no
+> patch files), adds the provider-preset selector to the card, and fixes the
+> preset expansion that a schema default silently pre-empted.
 
 ## Why
 
@@ -47,7 +50,7 @@ Plus the DSH-native experience:
 ## Install
 
 ```sh
-dsh plugin --profile web add dsh-llm-vision@0.2.2
+dsh plugin --profile web add dsh-llm-vision@0.3.0
 ```
 
 The version is pinned on purpose: pnpm 11 holds back packages published in the
@@ -68,83 +71,50 @@ runs on the installing machine.
 
 ### Configure
 
-The official web GUI's plugin-configuration page only exposes allowlisted
-settings namespaces — third-party namespaces are a deliberate security
-boundary (the harness comments call plugin-declared exposure "deferred
-work"). The settings card therefore shows a "namespace not exposed" note;
-configure through the profile patch layer instead, referencing the key from
-the environment (never a plaintext key in a patch file):
+Everything is configured in the GUI — the **Settings → Plugins → llm-vision**
+card. No patch file, no environment exports required:
 
-```yaml
-# ~/.dsh/profiles/web/cordis.patch.yml
-- id: llm-vision
-  name: 'dsh-llm-vision'
-  config:
-    baseURL: https://dashscope.aliyuncs.com/compatible-mode/v1
-    model: qwen3-vl-plus
-    ocrModel: qwen3.5-ocr
-    apiKey: !!js process.env.VISION_API_KEY
-```
+1. Open **Settings → Plugins** and find the **llm-vision** card.
+2. Pick a **Provider preset** for a zero-config free route, or set
+   `baseURL` / `model` / `ocrModel` yourself (`custom`).
+3. Fill the **API key** field (a secret: it is stored in the harness's
+   owner-only settings document and never shown again), or leave it empty and
+   let `apiKeyEnv` resolve through the credential seam (`VISION_API_KEY` by
+   default).
+4. **Save** — the change reaches the very next tool call, no restart.
 
-```sh
-# ~/.dsh/.env (or export it before launching dsh)
-VISION_API_KEY=sk-...
-```
-
-Then restart the GUI. The card is visible in Settings → Plugins and explains
-this gap instead of vanishing.
+The values live in the harness settings document (`~/.dsh/settings.yaml`,
+`0600`, shared across profiles) and are written by the GUI. A profile patch
+layer may still provide *deployment defaults* for the card (shown as
+"Inherit"), but the card's saved values always win — the GUI is the only
+configuration surface a user needs. A deployment without a settings provider
+falls back to the built-in defaults.
 
 #### Free presets (zero-cost routes)
 
-Instead of naming `baseURL` / `model` / `ocrModel` yourself, one `provider`
-switch fills them from a built-in preset — including two **permanently free**
-vision routes (facts verified 2026-08; free policies change, so re-check the
-provider docs if a call stops working):
+The **Provider preset** selector fills `baseURL` / `model` / `ocrModel` /
+`apiKeyEnv` for you — including two **permanently free** vision routes (facts
+verified 2026-08; free policies change, so re-check the provider docs if a
+call stops working):
 
-```yaml
-# Zhipu BigModel — free GLM-4V-Flash (best default in mainland China)
-- id: llm-vision
-  name: 'dsh-llm-vision'
-  config:
-    provider: zhipu
-    apiKey: !!js process.env.ZHIPU_API_KEY   # or set apiKeyEnv: ZHIPU_API_KEY
-```
+| Preset | Endpoint | Key |
+|---|---|---|
+| `zhipu` | Zhipu BigModel — free GLM-4V-Flash (best default in mainland China) | `ZHIPU_API_KEY` (open.bigmodel.cn, free tier, no card) |
+| `gemini` | Google Gemini — free key from Google AI Studio (aistudio.google.com, no card) | `GEMINI_API_KEY` |
+| `dashscope` | Alibaba DashScope (the default models) | `DASHSCOPE_API_KEY` |
 
-```sh
-# ~/.dsh/.env
-ZHIPU_API_KEY=your-zhipu-key   # https://open.bigmodel.cn — free tier, no card
-```
-
-```yaml
-# Google Gemini — free key from Google AI Studio (aistudio.google.com, no card)
-- id: llm-vision
-  name: 'dsh-llm-vision'
-  config:
-    provider: gemini
-    apiKey: !!js process.env.GEMINI_API_KEY
-```
-
-```yaml
-# Alibaba DashScope (the default models, as a preset)
-- id: llm-vision
-  name: 'dsh-llm-vision'
-  config:
-    provider: dashscope
-    apiKey: !!js process.env.DASHSCOPE_API_KEY
-```
-
-Explicit `baseURL` / `model` / `ocrModel` / `apiKeyEnv` always override the
-preset. The free presets reuse the vision model for OCR (`extract_text` drives
-it with the OCR prompt) — free tiers are rate-limited, so they suit
-interactive use better than batch runs.
+Picking a preset prefills the endpoint fields (still editable before saving);
+explicit field values always win at call time. The free presets reuse the
+vision model for OCR (`extract_text` drives it with the OCR prompt) — free
+tiers are rate-limited, so they suit interactive use better than batch runs.
 
 | Key | Default | Meaning |
 |---|---|---|
 | `provider` | `custom` | Endpoint preset: `custom` (all fields explicit), `dashscope`, `zhipu` (free GLM-4V-Flash), or `gemini` (free key). Explicit fields win. |
 | `baseURL` | — (required for `custom`) | OpenAI-compatible root URL; `/chat/completions` or `/responses` appended per `apiStyle`. |
-| `model` | `qwen3-vl-plus` | Vision model for `describe_image`; optional thinking suffix `:off/:low/:medium/:high`. |
-| `ocrModel` | `qwen3.5-ocr` | OCR model for `extract_text`; same suffix support. |
-| `apiKey` | — | Inline key; prefer `apiKeyEnv`. Schema marks it secret. |
+| `model` | preset, else `qwen3-vl-plus` | Vision model for `describe_image`; optional thinking suffix `:off/:low/:medium/:high`. |
+| `ocrModel` | preset, else `qwen3.5-ocr` | OCR model for `extract_text`; same suffix support. |
+| `apiKey` | — | Inline key, stored in the settings document (secret: never shown by the GUI). |
 | `apiKeyEnv` | `VISION_API_KEY` | Credential-reference (env var name) resolved through the credential seam; empty disables. |
 | `criticalPrompt` | built-in | `describe_image` critical-perspective prompt when the model passes none. |
 | `normalPrompt` | built-in | `describe_image` normal-perspective prompt when the model passes none. |
@@ -162,6 +132,16 @@ interactive use better than batch runs.
 | `cacheMaxEntries` | `500` | Cache capacity; oldest evicted. |
 | `renderImagePreview` | `true` | Upgrade attach references into inline thumbnails (display only). |
 | `interceptImageSend` | `true` | Rewrite image-bearing sends into attach references at submit; turn off to hand raw image blocks to other vision plugins. |
+
+#### Migrating from v0.2.x
+
+v0.3.0 makes the settings card the authoritative configuration surface.
+There was no released user base before this change, so there is no automatic
+migration: after upgrading, remove the old `llm-vision` config block from
+`cordis.patch.yml` and re-enter your endpoint and key in the card once
+(any values you had there — e.g. a raised `maxBytes` — must be set again in
+the GUI). Environment variables set for the key (`VISION_API_KEY` etc.) keep
+working as the `apiKeyEnv` fallback.
 
 ## Reliability engineering
 
@@ -194,15 +174,13 @@ interactive use better than batch runs.
 
 ## Testing status
 
-216 offline unit/integration tests (vitest, mock HTTP server, tmp-dir cache)
+227 offline unit/integration tests (vitest, mock HTTP server, tmp-dir cache)
 plus a strict typecheck and CI on every push. Verified **end-to-end in the
 real DSH web GUI** against a live OpenAI-compatible vision endpoint:
 `describe_image` reads a real image (DashScope `qwen3-vl-plus`), `extract_text`
 OCR returns real transcription (`qwen3.5-ocr`), the attach upload/readback
-routes work through the live web server, and the settings card renders in the
-plugin-configuration page. Known cosmetic gap: the card cannot edit values in
-the GUI (official settings allowlist), so configuration lives in the patch
-layer — see [Configure](#configure).
+routes work through the live web server, and the settings card renders and
+saves in the plugin-configuration page — see [Configure](#configure).
 
 ## Known limitations
 
@@ -220,7 +198,7 @@ layer — see [Configure](#configure).
 
 ```bash
 pnpm typecheck   # tsc -b + vitest program
-pnpm test        # vitest run (216 tests, fully offline)
+pnpm test        # vitest run (227 tests, fully offline)
 pnpm build       # tsc -b && tsdown → lib/ + lib/client.js
 pnpm watch       # tsdown --watch
 ```

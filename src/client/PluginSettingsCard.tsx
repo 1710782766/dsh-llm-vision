@@ -114,10 +114,10 @@ export function PluginSettingsCard<TKey extends string = string>(props: PluginSe
         </svg>
       </button>
     )
-  // The namespace exists but the Host does not serve it to this client (the
-  // official settings allowlist omits third-party namespaces): show a card
-  // that explains the gap instead of vanishing, so a missing card never
-  // reads as a missing plugin.
+  // The namespace exists but the Host does not serve it to this client (no
+  // settings provider in this deployment, or the section has not registered):
+  // show a card that explains the gap instead of vanishing, so a missing
+  // card never reads as a missing plugin.
   if (!state.exposed) {
     return (
       <li className={cardClass}>

@@ -25,6 +25,7 @@
   },
   "include": [
     "src/client/**/*.ts",
-    "src/client/**/*.tsx"
+    "src/client/**/*.tsx",
+    "src/presets.ts"
   ]
 }

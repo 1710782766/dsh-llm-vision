@@ -12,10 +12,12 @@ import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-cli
 import type { SettingsScope, SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
 import { PluginSettingsCard, BooleanField, ChoiceField, ValueField } from './PluginSettingsCard.tsx'
 import { CardForm, booleanField, choiceField, numberField, secretField, textField, type CardActions, type CardShell, type FieldState as CardFieldState } from './settings-form.ts'
+import { PROVIDER_IDS, PROVIDER_PRESETS, type ProviderId } from '../presets.ts'
 import { t } from './locales.ts'
 
 /** The describe-image fields this card edits (the namespace's full schema). */
 export interface DescribeImageSettings {
+  provider?: ProviderId
   baseURL?: string
   model?: string
   ocrModel?: string
@@ -41,6 +43,7 @@ export interface DescribeImageSettings {
 
 /** What the describe-image card renders. */
 export interface DescribeImageSettingsCardState extends CardShell {
+  provider: CardFieldState
   baseURL: CardFieldState
   model: CardFieldState
   ocrModel: CardFieldState
@@ -80,6 +83,7 @@ export class DescribeImageSettingsCardController {
   /** @param scope - the bound settings scope for the `describe-image` namespace. */
   constructor(scope: SettingsScope<DescribeImageSettings>) {
     this.form = new CardForm(scope, [
+      choiceField('provider', [...PROVIDER_IDS]),
       textField('baseURL'),
       textField('model'),
       textField('ocrModel'),
@@ -108,6 +112,7 @@ export class DescribeImageSettingsCardController {
   private projection(): DescribeImageSettingsCardState {
     return {
       ...this.form.shell(),
+      provider: this.form.field('provider'),
       baseURL: this.form.field('baseURL'),
       model: this.form.field('model'),
       ocrModel: this.form.field('ocrModel'),
@@ -155,6 +160,25 @@ export type DescribeImageSettingsCardProps =
   & InjectFace<DescribeImageSettingsCardFace>
 
 /**
+ * Stage one provider choice onto the card: write the provider field and
+ * prefill the endpoint facts from its preset when the choice is a preset
+ * (custom or an unknown value prefill nothing, leaving the fields as they
+ * are). Pure — the caller's `edit` sink receives the staged drafts.
+ * @param edit - the card's staged edit action.
+ * @param provider - the chosen provider id text.
+ */
+export function stageProviderPreset(edit: (field: string, text: string) => void, provider: string): void {
+  edit('provider', provider)
+  const preset = provider !== 'custom' ? PROVIDER_PRESETS[provider as Exclude<ProviderId, 'custom'>] : undefined
+  if (preset !== undefined) {
+    edit('baseURL', preset.baseURL)
+    edit('model', preset.model)
+    edit('ocrModel', preset.ocrModel)
+    edit('apiKeyEnv', preset.apiKeyEnv)
+  }
+}
+
+/**
  * Render the describe-image card.
  * @param props - the card snapshot and its form actions.
  * @returns the card.
@@ -177,6 +201,22 @@ export function DescribeImageSettingsCard(props: DescribeImageSettingsCardProps)
       onSave={props.save}
       onDiscard={props.discard}
     >
+      <ChoiceField
+        id="settings-describe-image-provider"
+        label={t('field.provider')}
+        hint={t('field.provider.hint')}
+        inheritLabel={t('settings.inherit')}
+        choices={[
+          { value: 'custom', label: t('field.provider.custom') },
+          { value: 'dashscope', label: t('field.provider.dashscope') },
+          { value: 'zhipu', label: t('field.provider.zhipu') },
+          { value: 'gemini', label: t('field.provider.gemini') },
+        ]}
+        {...fieldProps}
+        {...state.provider}
+        onEdit={(text) => { stageProviderPreset(props.edit, text) }}
+        onReset={() => { props.resetField('provider') }}
+      />
       <ValueField
         id="settings-describe-image-baseurl"
         label={t('field.baseURL')}

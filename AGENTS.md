@@ -26,6 +26,14 @@ hallucinate on screenshots"**——critical 审视视角（实测沉淀）+ 可�
 
     src/index.ts（注册 describe_image[normal|critical，单图 image / 批量 images ≤ 8] +
       extract_text + llm_vision_check 诊断，共 runVision 管线）
+      → config-resolve.ts（Config schemastery schema = 设置卡 schema；resolveConfig
+        每次调用时展开：显式字段 > provider 预设 > 内置默认；apiKey 解析链）
+      → presets.ts          **预设数据唯一源**（ProviderId/PROVIDER_IDS/PROVIDER_PRESETS/
+                            DEFAULT_VISION_MODEL/DEFAULT_OCR_MODEL，零依赖纯数据）——
+                            host 与 client 半共用；任何地方出现第二份拷贝都是 review 失败
+      → settings 接线：apply 里 installSettingsSection(ctx, LLM_VISION_SETTINGS_NAMESPACE,
+        Config, entry, { setSource, validate }) —— 设置卡保存的 user 层覆盖 entry（base
+        层），无 settings 服务时回退 entry；配置权威来源 = GUI 设置卡
       → cache.ts            PersistentAnswerCache：内容寻址（图片字节 SHA-256，单图 key
                              格式锁定 v1——存量缓存跨版本命中；多图 key 用 digest 列表），
                              TTL 30d，上限 500 条，原子写，0600/0700，跨会话
@@ -43,7 +51,9 @@ hallucinate on screenshots"**——critical 审视视角（实测沉淀）+ 可�
       → attach-routes.ts    /llm-vision/attach 上传路由 + /llm-vision/raw 回读（内容寻址 id；
                             body cap 随 maxBytes 动态放大；附件通道仅收官方 4 类媒体，
                             HEIC/HEIF 上传明确拒绝并提示走路径）
-      → client/（browser 半）发送改写为引用、会话内缩略图、设置卡（slots + settingsScope）
+      → client/（browser 半）发送改写为引用、会话内缩略图、设置卡
+        （slots 'settings.plugin.item' 注册必须用 key = LLM_VISION_SETTINGS_NAMESPACE
+        ——keyed slot 按 key 分发，id 永不渲染；SETTINGS_CARD_KEY 常量钉住一致性）
 
 - 工具恒返回字符串成功 / 抛错失败，图片字节永不进会话记录
 - mountOnce('dsh-llm-vision', …) 防重复挂载；工具注册基于副作用，卸载自动注销
@@ -51,10 +61,20 @@ hallucinate on screenshots"**——critical 审视视角（实测沉淀）+ 可�
 
 ## 配置纪律（改默认值需同步 5 处）
 
-配置默认值同时出现在：config-resolve.ts 的 DEFAULT_* 常量、同文件 Schemastery
-schema 默认、tests/ 相关断言、README ×2 的配置表、本文件。只改一处会静默漂移
-（此前踩过的坑，不许重犯）。所有"部署间可能不同的旋钮"必须是配置字段，不得
-硬编码。
+配置默认值同时出现在：presets.ts 或 config-resolve.ts 的 DEFAULT_* 常量、Config
+schema（注意：model/ocrModel/apiKeyEnv 故意无 schema 默认——有默认会抢在 provider
+预设展开之前，预设开关就失效了，有回归测试钉住）、tests/ 相关断言、README ×2
+的配置表、本文件。只改一处会静默漂移（此前踩过的坑，不许重犯）。所有"部署间
+可能不同的旋钮"必须是配置字段，不得硬编码。预设数据只在 src/presets.ts 一份。
+
+## 设置卡契约（不许再犯的坑）
+
+- host 半通过 installSettingsSection 注册 namespace；client 卡片注册进
+  `settings.plugin.item` 必须带 `key`（keyed slot 的分发键），且 key 必须等于
+  namespace 字符串——`id` 不会被分发，卡片会静默不渲染（v0.3.0 修复的历史断点）
+- harness 的 settings 服务对第三方 namespace 无白名单：describe() 全量返回注册项；
+  "allowlisted settings namespaces"是错误结论（源于对 cordis-host-runner 沙箱 guard
+  的误读——那是会话级动态插件机制，与 bundle 静态加载无关），文档不得再写
 
 ## 测试纪律
 
