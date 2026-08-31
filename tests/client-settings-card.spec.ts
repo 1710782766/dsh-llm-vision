@@ -4,30 +4,12 @@
  * the keyed-slot contract (the card key MUST match the host settings
  * namespace — the configurable-plugins tab dispatches by that pair).
  *
- * The published dsh-client-runtime ships as a __ModuleLoader__ bundle that
- * cannot execute outside the web shell, so its snapshot-store engine is
- * replaced with a minimal twin here — the tests under this file exercise
- * pure staging logic and constants, never a live store.
+ * These exercise pure staging logic and constants. The snapshot-store engine
+ * (@deepseek-ai/dsh-client-store) is a plain module since the browser half
+ * migrated off the dsh-client-runtime bundle, so the real implementation runs
+ * here untouched.
  */
 import { describe, expect, it, vi } from 'vitest'
-
-vi.mock('@deepseek-ai/dsh-client-runtime/client', () => ({
-  createSnapshotStore: (initial: unknown) => {
-    let value = initial
-    const listeners = new Set<() => void>()
-    return {
-      getSnapshot: () => value,
-      subscribe: (listener: () => void) => {
-        listeners.add(listener)
-        return () => { listeners.delete(listener) }
-      },
-      set: (next: unknown) => {
-        value = next
-        for (const listener of [...listeners]) listener()
-      },
-    }
-  },
-}))
 
 import { stageProviderPreset } from '../src/client/DescribeImageSettingsCard.tsx'
 import { SETTINGS_CARD_KEY } from '../src/client/index.ts'
