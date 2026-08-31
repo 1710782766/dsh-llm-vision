@@ -3,3 +3,5 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - '@deepseek-ai/dsh-settings@0.1.2-alpha.2'
   - '@deepseek-ai/dsh-util-values@0.1.2-alpha.2'
+  - '@deepseek-ai/dsh-client-store@0.1.2-alpha.2'
+  - '@deepseek-ai/dsh-client-ui-settings@0.1.2-alpha.2'

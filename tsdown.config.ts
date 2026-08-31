@@ -28,8 +28,8 @@ const PLATFORM_MODULES = [
 /** Wire/type layers a client bundle may inline: browser-safe contract surfaces with no runtime identity. */
 const INLINE_SAFE = /^@deepseek-ai\/dsh-(host-apiproxy|session|llm|tools|brand)(\/|$)/
 const GENERATED_REMOTE = /^@deepseek-ai\/dsh-[a-z0-9]+(?:-[a-z0-9]+)*\/remote$/
-/** Documented TEMPORARY exemption: the snapshot-store engine lives in runtime pending rehoming. */
-const RUNTIME_STORE_EXEMPTION = '@deepseek-ai/dsh-client-runtime/client'
+/** Snapshot-store engine: rehomed from dsh-client-runtime into the official client-store module (dsh 0.1.2-alpha.1). */
+const RUNTIME_STORE_EXEMPTION = '@deepseek-ai/dsh-client-store'
 const CLIENT_EXTERNALS: readonly string[] = [...PLATFORM_MODULES, RUNTIME_STORE_EXEMPTION]
 
 const CSS_VIRTUAL_PREFIX = '\0dsh-css:'
