@@ -31,9 +31,11 @@ hallucinate on screenshots"**——critical 审视视角（实测沉淀）+ 可�
       → presets.ts          **预设数据唯一源**（ProviderId/PROVIDER_IDS/PROVIDER_PRESETS/
                             DEFAULT_VISION_MODEL/DEFAULT_OCR_MODEL，零依赖纯数据）——
                             host 与 client 半共用；任何地方出现第二份拷贝都是 review 失败
-      → settings 接线：apply 里 installSettingsSection(ctx, LLM_VISION_SETTINGS_NAMESPACE,
-        Config, entry, { setSource, validate }) —— 设置卡保存的 user 层覆盖 entry（base
-        层），无 settings 服务时回退 entry；配置权威来源 = GUI 设置卡
+      → settings 接线：apply 里 ctx.inject(['settings']) 后
+        settingsCtx.settings.installSection(ctx, LLM_VISION_SETTINGS_NAMESPACE, Config,
+        config, { setSource, validate })（dsh ≥ 0.1.2-alpha.1 服务 API，官方 cookbook
+        同款）—— 设置卡保存的 user 层覆盖 entry（base 层），无 settings 服务时回退
+        entry；配置权威来源 = GUI 设置卡
       → cache.ts            PersistentAnswerCache：内容寻址（图片字节 SHA-256，单图 key
                              格式锁定 v1——存量缓存跨版本命中；多图 key 用 digest 列表），
                              TTL 30d，上限 500 条，原子写，0600/0700，跨会话
@@ -69,7 +71,7 @@ schema（注意：model/ocrModel/apiKeyEnv 故意无 schema 默认——有默�
 
 ## 设置卡契约（不许再犯的坑）
 
-- host 半通过 installSettingsSection 注册 namespace；client 卡片注册进
+- host 半通过 ctx.settings.installSection 注册 namespace；client 卡片注册进
   `settings.plugin.item` 必须带 `key`（keyed slot 的分发键），且 key 必须等于
   namespace 字符串——`id` 不会被分发，卡片会静默不渲染（v0.3.0 修复的历史断点）
 - harness 的 settings 服务对第三方 namespace 无白名单：describe() 全量返回注册项；

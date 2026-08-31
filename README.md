@@ -18,7 +18,7 @@ without touching a config file.
 ## Quick start
 
 ```sh
-dsh plugin --profile web add dsh-llm-vision@0.3.0
+dsh plugin --profile web add dsh-llm-vision@0.3.2
 ```
 
 1. **Install** with the command above (or see [Install](#install)).
@@ -61,7 +61,7 @@ Plus the DSH-native experience:
 ## Install
 
 ```sh
-dsh plugin --profile web add dsh-llm-vision@0.3.0
+dsh plugin --profile web add dsh-llm-vision@0.3.2
 ```
 
 Then **restart the GUI once** — plugins load at boot, so the plugin and its
@@ -73,6 +73,10 @@ last 24 hours, so a bare `add dsh-llm-vision` (latest) would silently install
 the previous release on launch day. This line is bumped with every release.
 `--profile web` is the GUI profile of this deployment — use your own profile
 name if it differs.
+
+Requires **dsh ≥ 0.1.2-alpha.1** — the settings-card host API and the
+browser-half store moved in that release; older harness builds cannot serve
+the card.
 
 From a source checkout the same command accepts a tarball or local path
 (`pnpm pack` names the tarball after the current version — use that name):

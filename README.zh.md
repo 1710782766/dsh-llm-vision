@@ -15,7 +15,7 @@
 ## 快速上手
 
 ```sh
-dsh plugin --profile web add dsh-llm-vision@0.3.0
+dsh plugin --profile web add dsh-llm-vision@0.3.2
 ```
 
 1. **安装**（上面命令，或见[安装](#安装)）；
@@ -50,7 +50,7 @@ DSH 原生体验：
 ## 安装
 
 ```sh
-dsh plugin --profile web add dsh-llm-vision@0.3.0
+dsh plugin --profile web add dsh-llm-vision@0.3.2
 ```
 
 然后**重启一次 GUI**——插件在启动时加载，重启后插件与设置卡才可见（此后改配置
@@ -59,6 +59,9 @@ dsh plugin --profile web add dsh-llm-vision@0.3.0
 版本号是刻意钉扎的：pnpm 11 会暂缓 24 小时内新发布的包，裸 `add dsh-llm-vision`
 （latest）在发版当天会静默装到上一版。本行随每次发版同步更新。`--profile web`
 是当前部署的 GUI profile 名——不同部署请换成自己的 profile。
+
+本版本要求 **dsh ≥ 0.1.2-alpha.1**（设置卡宿主 API 与浏览器半的 store 在该版本
+调整）；更旧的 harness 无法渲染设置卡。
 
 从源码 checkout 安装时，同一命令接受 tarball 或本地路径
 （`pnpm pack` 以当前版本命名 tarball——请使用实际产出的文件名）：
