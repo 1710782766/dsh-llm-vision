@@ -12,7 +12,6 @@ import z from 'schemastery'
 import { credentialRef } from '@deepseek-ai/dsh-credentials'
 import type { CredentialRef } from '@deepseek-ai/dsh-credentials'
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
-import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 import { DEFAULT_MAX_BYTES } from './media.ts'
 import { DEFAULT_MAX_EDGE } from './preprocess.ts'
 import { DEFAULT_MAX_ENTRIES, DEFAULT_TTL_DAYS } from './cache.ts'
@@ -172,7 +171,7 @@ export const Config: z<Config> = z.object({
 })
 
 /** Settings namespace carrying the endpoint, models, and key reference the Plugins card edits. */
-export const LLM_VISION_SETTINGS_NAMESPACE = settingsNamespace('llm-vision')
+export const LLM_VISION_SETTINGS_NAMESPACE = 'llm-vision'
 
 /** One resolved, validated configuration snapshot; defaults and beyond-schema constraints applied. */
 export interface ResolvedConfig {

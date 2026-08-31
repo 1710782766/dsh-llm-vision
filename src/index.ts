@@ -13,7 +13,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
-import { installSettingsSection } from '@deepseek-ai/dsh-settings'
+import type {} from '@deepseek-ai/dsh-settings'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type { GenericCallView } from '@deepseek-ai/dsh-tools'
 import { registerAttachRoute } from './attach-routes.ts'
@@ -216,14 +216,16 @@ function applyImpl(ctx: Context, config: Config = {}): void {
     resolveConfig(config)
   }
   let current: () => Config = () => config
-  installSettingsSection(ctx, LLM_VISION_SETTINGS_NAMESPACE, Config, config, {
-    setSource: (source) => {
-      current = source
-    },
-    onChange: () => {},
-    validate: (value) => {
-      if (value.baseURL !== undefined) resolveConfig(value)
-    },
+  ctx.inject(['settings'], (settingsCtx) => {
+    settingsCtx.settings.installSection(ctx, LLM_VISION_SETTINGS_NAMESPACE, Config, config, {
+      setSource: (source) => {
+        current = source
+      },
+      onChange: () => {},
+      validate: (value) => {
+        if (value.baseURL !== undefined) resolveConfig(value)
+      },
+    })
   })
   const spec = (): ResolvedConfig => resolveConfig(current())
   registerAttachRoute(ctx, () => current().maxBytes ?? DEFAULT_MAX_BYTES)
